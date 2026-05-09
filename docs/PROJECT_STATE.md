@@ -27,7 +27,7 @@ Wave 3 app-pwa 已完成手机端视觉纠偏，但未达到可用 PWA demo。
 
 ## 当前阻塞
 
-- GitHub Pages 是否成功部署仍需确认。
+- GitHub Pages 预览当前返回 404，需在 `#1` 中解决 Pages 启用/部署问题。
 - 尚未验证安卓手机真实访问和 PWA 安装链路。
 - 尚未实现可交互干预游戏运行时。
 - `product-ux`、`robot-bridge`、`bci-cloud` 的 Wave 3 review 暂缓，等 `0013c` 和 `0013d` 完成后再做。
