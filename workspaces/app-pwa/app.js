@@ -38,8 +38,6 @@ const state = {
   violations: 0,
   reportRequest: null,
   reportResponse: null,
-  timer: null,
-  stepIndex: 0,
   startedAt: null,
   endedAt: null,
   deferredInstallPrompt: null,
@@ -47,23 +45,6 @@ const state = {
   bciConfidence: "正常",
   robotIssue: ""
 };
-
-const flow = [
-  { phase: "规则说明", event: "phase_changed", robotCase: "go_invite_ok" },
-  { phase: "Go", event: "state_go", robotCase: "go_invite_ok" },
-  { phase: "扫描", event: "scan_requested", robotCase: "go_invite_ok", scan: true },
-  { phase: "No-Go", event: "state_nogo", robotCase: "nogo_stop_busy", violation: true },
-  { phase: "Go", event: "state_go", robotCase: "go_invite_ok" },
-  { phase: "扫描", event: "scan_requested", robotCase: "go_invite_ok", scan: true },
-  { phase: "Go", event: "state_go", robotCase: "go_invite_ok" },
-  { phase: "扫描", event: "scan_requested", robotCase: "go_invite_ok", scan: true },
-  { phase: "No-Go", event: "state_nogo", robotCase: "go_invite_ok" },
-  { phase: "Go", event: "state_go", robotCase: "go_invite_ok" },
-  { phase: "扫描", event: "scan_requested", robotCase: "go_invite_ok", scan: true },
-  { phase: "Go", event: "state_go", robotCase: "go_invite_ok" },
-  { phase: "扫描", event: "scan_requested", robotCase: "go_invite_ok", scan: true },
-  { phase: "扫描", event: "scan_requested", robotCase: "go_invite_ok", scan: true }
-];
 
 function now() {
   return new Date().toISOString();
@@ -226,7 +207,6 @@ function startTraining() {
   state.scanCount = 0;
   state.lives = state.manifest.rules.initialLives;
   state.phase = "规则说明";
-  state.stepIndex = 0;
   state.startedAt = now();
   state.events = [];
   state.reportRequest = null;
@@ -252,61 +232,6 @@ function startTraining() {
       message: state.degradationReason
     });
   }
-  render();
-}
-
-function runNextStep() {
-  if (state.page === "complete" || state.page === "report") return;
-  if (state.scanCount >= state.manifest.rules.totalScans) {
-    completeTraining();
-    return;
-  }
-
-  const step = flow[state.stepIndex % flow.length];
-  state.phase = step.phase;
-  addEvent(step.event, {
-    phase: step.phase,
-    state: step.phase.toUpperCase(),
-    scanCount: state.scanCount,
-    lives: state.lives
-  });
-
-  const command = robotCommandByCase(step.robotCase);
-  const eventCase = step.robotCase === "nogo_stop_busy" ? "nogo_stop_busy" : "go_invite_finished_ok";
-  const robotEvent = robotEventByCase(eventCase);
-  state.robotState = robotEvent?.status === "busy" ? "busy" : robotEvent?.data?.bridgeState ?? "idle";
-
-  if (command?.name) {
-    addEvent("robot_command_mocked", {
-      commandName: command.name,
-      commandType: command.type,
-      robotStatus: robotEvent?.status ?? "ok"
-    });
-  }
-
-  if (step.violation && state.violations === 0) {
-    state.violations += 1;
-    state.lives = Math.max(0, state.lives - 1);
-    addEvent("nogo_violation", {
-      lives: state.lives,
-      markerId: state.manifest.rules.targetMarkerId,
-      markerInCenter: true,
-      scanCount: state.scanCount
-    });
-  }
-
-  if (step.scan) {
-    state.scanCount = Math.min(state.manifest.rules.totalScans, state.scanCount + 1);
-    addEvent("scan_success", {
-      scanCount: state.scanCount,
-      totalScans: state.manifest.rules.totalScans,
-      markerId: state.manifest.rules.targetMarkerId,
-      scanHoldSec: state.manifest.rules.timing.scanHoldSec
-    });
-    updateBciSummary(state.scanCount === 4 ? "fluctuating" : "stable");
-  }
-
-  state.stepIndex += 1;
   render();
 }
 
@@ -469,10 +394,6 @@ function simulateRobotUnavailable() {
 }
 
 function completeTraining() {
-  if (state.timer) {
-    window.clearInterval(state.timer);
-    state.timer = null;
-  }
   state.phase = "完成";
   state.endedAt = now();
   addEvent("level_completed", {
@@ -540,7 +461,6 @@ function buildReport() {
 }
 
 function resetDemo() {
-  if (state.timer) window.clearInterval(state.timer);
   state.page = "prepare";
   state.sessionId = `session_mock_${Date.now()}`;
   state.devices = {
@@ -682,6 +602,8 @@ function renderTraining() {
       </section>
       <section class="mobile-section">
         <div class="panel stack">
+          <h2>交互运行时</h2>
+          <p class="label">训练不会自动通关；请按 TonyPi mock 信号或演示需要记录扫描、等待和降级。</p>
           <div class="split">
             <div class="metric"><span class="label">扫描进度</span><b>${state.scanCount} / ${total}</b></div>
             <div class="metric"><span class="label">生命值</span><b>${state.lives} / ${state.manifest.rules.initialLives}</b></div>
