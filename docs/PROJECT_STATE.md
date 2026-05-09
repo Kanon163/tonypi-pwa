@@ -4,7 +4,7 @@
 
 Wave 3 app-pwa 已完成手机端视觉纠偏，但未达到可用 PWA demo。
 
-项目正在切换到 GitHub-centered workflow：Issue 管任务、PR 管交付、GitHub Pages 管手机预览。
+项目已切换到 GitHub-centered workflow：Issue 管任务、PR 管交付、GitHub Pages 管手机预览。
 
 ## 当前结论
 
@@ -18,14 +18,16 @@ Wave 3 app-pwa 已完成手机端视觉纠偏，但未达到可用 PWA demo。
 - 工程信息不得出现在家长端主界面。
 - 训练运行页需要预留 TonyPi 视觉信号/机器人状态空间。
 - 当前训练仍是顺序播放演示，不是可交互干预游戏运行时。
-- GitHub 将成为后续 agent 协作与验收中枢。
+- GitHub 仓库：`https://github.com/Kanon163/tonypi-pwa`
+- PWA Pages 预览目标：`https://kanon163.github.io/tonypi-pwa/workspaces/app-pwa/`
+- 当前开放 Issue：`#1` 安卓手机 PWA 运行链路，`#2` 干预游戏运行时。
 - 第二关默认节奏采用 `wave2_demo_default`。
 - Go/No-Go 扫描计数字段统一为 `scanCount`。
 - `camera_unavailable`、`operator_override_enabled`、`report_ready` 已进入契约。
 
 ## 当前阻塞
 
-- GitHub 新仓库尚未创建并绑定本地 remote。
+- GitHub Pages 是否成功部署仍需确认。
 - 尚未验证安卓手机真实访问和 PWA 安装链路。
 - 尚未实现可交互干预游戏运行时。
 - `product-ux`、`robot-bridge`、`bci-cloud` 的 Wave 3 review 暂缓，等 `0013c` 和 `0013d` 完成后再做。
@@ -33,7 +35,6 @@ Wave 3 app-pwa 已完成手机端视觉纠偏，但未达到可用 PWA demo。
 
 ## 下一步
 
-1. 创建 GitHub private repo 并推送当前工作区。
-2. 启用 GitHub Pages 预览 PWA。
-3. 将 `0013c` 和 `0013d` 转成 GitHub Issues。
-4. 让 `app-pwa` 通过 PR 交付两项补齐任务。
+1. 确认 GitHub Pages 是否已成功部署。
+2. 让 `app-pwa` 通过 Issue `#1` 和 `#2` 的 PR 交付两项补齐任务。
+3. 合并后再启动专项 review。

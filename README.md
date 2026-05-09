@@ -19,5 +19,5 @@
 GitHub Pages 启用后：
 
 ```text
-https://<owner>.github.io/<repo>/workspaces/app-pwa/
+https://kanon163.github.io/tonypi-pwa/workspaces/app-pwa/
 ```

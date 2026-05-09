@@ -54,9 +54,13 @@ PWA 预览优先使用 GitHub Pages。
 - PWA 安装条件验证。
 - 给用户和 reviewer 一个稳定 URL。
 
+当前仓库：
+
+- `https://github.com/Kanon163/tonypi-pwa`
+
 默认预览路径：
 
-- `https://<owner>.github.io/<repo>/workspaces/app-pwa/`
+- `https://kanon163.github.io/tonypi-pwa/workspaces/app-pwa/`
 
 仓库包含 `.github/workflows/pages.yml`，从 `main` 部署整个仓库，保证 PWA 可以读取 `shared/`。
 
