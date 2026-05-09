@@ -1,0 +1,46 @@
+{
+  "reportSchemaVersion": "0.1",
+  "sessionId": "session_fixture_bci_001",
+  "reportId": "report_fixture_001",
+  "status": "ready",
+  "createdAt": "2026-05-08T12:10:30+08:00",
+  "audience": "parent",
+  "summary": "本次训练已完成。孩子能跟随 TonyPi 完成 Go/No-Go 练习，整体注意力记录较稳定，中途出现短暂信号波动。",
+  "highlights": [
+    "完成 1 个训练关卡。",
+    "BCI 有效采样率为 92%。",
+    "训练中出现 1 次 No-Go 冲动反应，可作为下次练习观察点。"
+  ],
+  "metrics": {
+    "completionRate": 1,
+    "attentionAvg": 68,
+    "attentionRange": { "min": 31, "max": 91 },
+    "validSampleRate": 0.92,
+    "lowSignalSeconds": 14,
+    "nogoViolationCount": 1,
+    "source": "simulated"
+  },
+  "sections": [
+    {
+      "id": "training",
+      "title": "训练完成情况",
+      "body": "孩子完成了本次能量晶石训练。Go 状态下能配合扫描任务，No-Go 状态下出现过一次提前反应。"
+    },
+    {
+      "id": "attention",
+      "title": "注意力记录",
+      "body": "模拟 BCI 数据显示，本次训练多数时间保持在可用信号范围内。该结果用于演示记录与反馈流程，不作为医学判断。"
+    },
+    {
+      "id": "next_step",
+      "title": "下次建议",
+      "body": "下次可继续使用相同关卡，观察 No-Go 等待时是否能减少冲动反应。"
+    }
+  ],
+  "warnings": [
+    {
+      "code": "SIMULATED_DATA",
+      "message": "本报告使用模拟 BCI 数据生成。"
+    }
+  ]
+}

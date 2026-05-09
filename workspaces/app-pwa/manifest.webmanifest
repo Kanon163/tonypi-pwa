@@ -1,0 +1,18 @@
+{
+  "name": "TonyPi 家长端训练",
+  "short_name": "TonyPi PWA",
+  "description": "家长端 PWA mock demo，用于收集能量晶石训练闭环。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f1e8",
+  "theme_color": "#16231f",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

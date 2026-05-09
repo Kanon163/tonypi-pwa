@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="TonyPi PWA">
+  <rect width="128" height="128" rx="28" fill="#16231f"/>
+  <circle cx="64" cy="64" r="34" fill="#d8f275"/>
+  <path d="M43 66h42M50 50h28M54 82h20" stroke="#16231f" stroke-width="9" stroke-linecap="round"/>
+</svg>

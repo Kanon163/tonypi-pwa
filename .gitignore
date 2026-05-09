@@ -1,0 +1,20 @@
+# Local/runtime
+node_modules/
+dist/
+build/
+.env
+.env.*
+.edge-profile/
+**/.edge-profile/
+
+# Local reference materials; do not publish by default
+.参考资料/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Logs and generated sessions
+runs/
+*.log

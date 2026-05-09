@@ -1,0 +1,106 @@
+{
+  "id": "level_gonogo_crystal_v1",
+  "title": "收集能量晶石",
+  "version": 1,
+  "trainingTargets": ["inhibitory_control", "sustained_attention"],
+  "story": {
+    "theme": "星际守护任务",
+    "fragmentIndex": 2,
+    "goalText": "在安全窗口收集并扫描 6 次能量晶石，乱流出现时保持停止。"
+  },
+  "rules": {
+    "targetMarkerId": 0,
+    "totalScans": 6,
+    "initialLives": 3,
+    "centerZone": { "xMin": 0.3, "xMax": 0.7, "yMin": 0.3, "yMax": 0.7 },
+    "timing": {
+      "profile": "wave2_demo_default",
+      "goDurationSecRange": [4.5, 15.0],
+      "nogoDurationSecRange": [4.5, 9.0],
+      "scanHoldSec": 2.2,
+      "cueWaitsForSpeech": true
+    },
+    "violation": {
+      "duringNogo": "target_marker_seen",
+      "penalty": { "type": "life_delta", "value": -1 },
+      "continueAfterViolation": true
+    },
+    "scan": {
+      "allowedState": "GO",
+      "requiresTargetInCenterZone": true,
+      "incrementsPerScan": 1
+    }
+  },
+  "assets": {
+    "audio": [
+      "bgm_level2_loop",
+      "voice_level2_intro",
+      "voice_level2_go_rule",
+      "voice_level2_nogo_rule",
+      "voice_level2_scan_rule",
+      "voice_level2_go_cue",
+      "voice_level2_nogo_cue",
+      "voice_level2_scan_request",
+      "voice_level2_scan_hold",
+      "voice_level2_scan_success",
+      "voice_level2_violation_retry",
+      "voice_level2_success"
+    ],
+    "actions": [
+      "greeting",
+      "go_invite",
+      "nogo_stop",
+      "scan_crystal",
+      "rest",
+      "celebrate_small",
+      "celebrate_big",
+      "encourage_retry"
+    ]
+  },
+  "robotCues": [
+    { "on": "level_started", "speech": "S02_001", "actionGroup": "greeting" },
+    { "on": "rule_go_spoken", "speech": "S02_002", "actionGroup": "go_invite" },
+    { "on": "rule_nogo_spoken", "speech": "S02_003", "actionGroup": "nogo_stop" },
+    { "on": "rule_scan_spoken", "speech": "S02_005", "actionGroup": "rest" },
+    { "on": "state_go", "speech": "S02_007", "actionGroup": "go_invite" },
+    { "on": "state_nogo", "speech": "S02_010", "actionGroup": "nogo_stop" },
+    { "on": "scan_requested", "speech": "S02_013", "actionGroup": "scan_crystal" },
+    { "on": "marker_detected", "speech": "S02_014", "actionGroup": "rest" },
+    { "on": "scan_success", "speech": "S02_015", "actionGroup": "celebrate_small" },
+    { "on": "nogo_violation", "speech": "S02_017", "actionGroup": "encourage_retry" },
+    { "on": "level_completed", "speech": "S02_019", "actionGroup": "celebrate_big" }
+  ],
+  "bciPolicy": {
+    "requiredForLevelLogic": false,
+    "recordDuringLevel": true,
+    "sessionSummaryFields": ["attentionAvg", "signalQualityAvg", "lowSignalSeconds"]
+  },
+  "inputRequirements": [
+    { "id": "robot_camera", "kind": "camera", "required": true, "mode": "aruco_scan" },
+    { "id": "aruco_marker", "kind": "visual_marker", "required": true, "markerId": 0 },
+    { "id": "bci_attention", "kind": "bci_sample", "required": false },
+    { "id": "operator_override", "kind": "manual_override", "required": false }
+  ],
+  "sessionEvents": [
+    { "type": "level_started", "payloadFields": ["levelId", "targetMarkerId", "totalScans"] },
+    { "type": "phase_changed", "payloadFields": ["phase", "state", "scanCount", "lives"] },
+    { "type": "state_go", "payloadFields": ["durationSec", "scanCount"] },
+    { "type": "state_nogo", "payloadFields": ["durationSec", "lives"] },
+    { "type": "scan_requested", "payloadFields": ["scanCount", "centerZone"] },
+    { "type": "scan_success", "payloadFields": ["scanCount", "totalScans", "markerId", "scanHoldSec"] },
+    { "type": "nogo_violation", "payloadFields": ["lives", "markerId", "markerInCenter"] },
+    { "type": "bci_attention_window_updated", "payloadFields": ["attentionAvg", "signalQualityAvg", "source"] },
+    { "type": "camera_unavailable", "payloadFields": ["reason", "mode"] },
+    { "type": "operator_override_enabled", "payloadFields": ["overrideType", "reason"] },
+    { "type": "level_completed", "payloadFields": ["success", "scanCount", "violations", "durationSec", "degradedMode"] }
+  ],
+  "successCriteria": {
+    "type": "all",
+    "conditions": [{ "field": "scanCount", "operator": ">=", "value": 6 }]
+  },
+  "fallbacks": [
+    { "when": "robot_unavailable", "mode": "mock_robot_bridge", "event": "degraded_mode_entered" },
+    { "when": "camera_unavailable", "mode": "operator_scan_override", "event": "degraded_mode_entered" },
+    { "when": "bci_unavailable", "mode": "simulated_bci", "event": "degraded_mode_entered" }
+  ]
+}

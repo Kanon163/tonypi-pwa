@@ -1,0 +1,138 @@
+{
+  "schemaVersion": "0.1",
+  "fixtureSource": "wave2_robot_bridge",
+  "mockOnly": true,
+  "notes": [
+    "These fixtures follow docs/CONTRACTS.md RobotEvent v0.1.",
+    "Event timing, command interruption, and stop behavior require real TonyPi validation."
+  ],
+  "events": [
+    {
+      "case": "health_check_ap_ok",
+      "event": {
+        "id": "evt_robot_health_001",
+        "type": "health_report",
+        "commandId": "cmd_robot_health_001",
+        "status": "ok",
+        "data": {
+          "networkMode": "ap",
+          "bridgeState": "idle",
+          "robotIp": "192.168.149.1",
+          "capabilities": [
+            "action_group",
+            "health_check",
+            "camera_mode",
+            "stop"
+          ],
+          "cameraReady": true,
+          "missingActions": [],
+          "lastError": null,
+          "mock": true
+        },
+        "timestamp": "2026-05-08T12:00:01+08:00"
+      }
+    },
+    {
+      "case": "go_invite_ack_ok",
+      "event": {
+        "id": "evt_robot_go_ack_001",
+        "type": "command_ack",
+        "commandId": "cmd_robot_go_001",
+        "status": "ok",
+        "data": {
+          "bridgeState": "idle",
+          "acceptedAction": "go_invite",
+          "mock": true
+        },
+        "timestamp": "2026-05-08T12:00:04+08:00"
+      }
+    },
+    {
+      "case": "go_invite_finished_ok",
+      "event": {
+        "id": "evt_robot_go_finished_001",
+        "type": "command_finished",
+        "commandId": "cmd_robot_go_001",
+        "status": "ok",
+        "data": {
+          "bridgeState": "idle",
+          "completedAction": "go_invite",
+          "durationMs": 1600,
+          "mock": true
+        },
+        "timestamp": "2026-05-08T12:00:06+08:00"
+      }
+    },
+    {
+      "case": "nogo_stop_busy",
+      "event": {
+        "id": "evt_robot_nogo_busy_001",
+        "type": "command_ack",
+        "commandId": "cmd_robot_nogo_001",
+        "status": "busy",
+        "data": {
+          "bridgeState": "busy",
+          "runningCommandId": "cmd_robot_go_001",
+          "rejectedAction": "nogo_stop",
+          "retryAfterMs": 500,
+          "mock": true
+        },
+        "timestamp": "2026-05-08T12:00:08+08:00"
+      }
+    },
+    {
+      "case": "scan_crystal_failed_missing_action_file",
+      "event": {
+        "id": "evt_robot_scan_failed_001",
+        "type": "error",
+        "commandId": "cmd_robot_scan_001",
+        "status": "failed",
+        "data": {
+          "bridgeState": "idle",
+          "failedAction": "scan_crystal",
+          "errorCode": "ACTION_FILE_MISSING",
+          "message": "Whitelisted action file is not available on the robot.",
+          "missingActions": [
+            "scan_crystal"
+          ],
+          "mock": true
+        },
+        "timestamp": "2026-05-08T12:00:13+08:00"
+      }
+    },
+    {
+      "case": "rest_unavailable_bridge_down",
+      "event": {
+        "id": "evt_robot_rest_unavailable_001",
+        "type": "error",
+        "commandId": "cmd_robot_rest_001",
+        "status": "unavailable",
+        "data": {
+          "networkMode": "unknown",
+          "bridgeState": "unavailable",
+          "robotIp": null,
+          "cameraReady": false,
+          "lastError": "Robot bridge not reachable.",
+          "mock": true
+        },
+        "timestamp": "2026-05-08T12:00:17+08:00"
+      }
+    },
+    {
+      "case": "stop_ack_ok",
+      "event": {
+        "id": "evt_robot_stop_ack_001",
+        "type": "command_ack",
+        "commandId": "cmd_robot_stop_001",
+        "status": "ok",
+        "data": {
+          "bridgeState": "stopping",
+          "stopSemantics": "mock_stop_accepts_no_new_actions",
+          "realInterruptVerified": false,
+          "mock": true
+        },
+        "timestamp": "2026-05-08T12:00:20+08:00"
+      }
+    }
+  ]
+}

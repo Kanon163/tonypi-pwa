@@ -1,0 +1,88 @@
+{
+  "reportSchemaVersion": "0.1",
+  "sessionId": "session_fixture_bci_001",
+  "childProfileId": "child_local_demo_001",
+  "startedAt": "2026-05-08T12:00:00+08:00",
+  "endedAt": "2026-05-08T12:10:00+08:00",
+  "events": [
+    {
+      "sessionId": "session_fixture_bci_001",
+      "levelId": "level_gonogo_crystal_v1",
+      "type": "session_started",
+      "payload": {},
+      "timestamp": "2026-05-08T12:00:00+08:00"
+    },
+    {
+      "sessionId": "session_fixture_bci_001",
+      "levelId": "level_gonogo_crystal_v1",
+      "type": "level_started",
+      "payload": {
+        "levelTitle": "收集能量晶石"
+      },
+      "timestamp": "2026-05-08T12:00:05+08:00"
+    },
+    {
+      "sessionId": "session_fixture_bci_001",
+      "levelId": "level_gonogo_crystal_v1",
+      "type": "scan_success",
+      "payload": {
+        "scanCount": 1,
+        "state": "go"
+      },
+      "timestamp": "2026-05-08T12:02:10+08:00"
+    },
+    {
+      "sessionId": "session_fixture_bci_001",
+      "levelId": "level_gonogo_crystal_v1",
+      "type": "nogo_violation",
+      "payload": {
+        "scanCount": 3,
+        "state": "nogo"
+      },
+      "timestamp": "2026-05-08T12:04:30+08:00"
+    },
+    {
+      "sessionId": "session_fixture_bci_001",
+      "levelId": "level_gonogo_crystal_v1",
+      "type": "bci_summary_ready",
+      "payload": {
+        "source": "simulated",
+        "validSampleRate": 0.92
+      },
+      "timestamp": "2026-05-08T12:09:40+08:00"
+    },
+    {
+      "sessionId": "session_fixture_bci_001",
+      "levelId": "level_gonogo_crystal_v1",
+      "type": "session_completed",
+      "payload": {
+        "completedLevels": 1
+      },
+      "timestamp": "2026-05-08T12:10:00+08:00"
+    }
+  ],
+  "bciSummary": {
+    "sampleCount": 300,
+    "validSampleRate": 0.92,
+    "attentionAvg": 68,
+    "attentionMin": 31,
+    "attentionMax": 91,
+    "signalQualityAvg": 88,
+    "lowSignalSeconds": 14,
+    "source": "simulated"
+  },
+  "deviceSummary": {
+    "bci": {
+      "deviceId": "bci_sim_001",
+      "source": "simulated",
+      "disconnectCount": 0,
+      "lowSignalSeconds": 14
+    },
+    "robot": {
+      "bridgeMode": "mock",
+      "unavailableSeconds": 0
+    }
+  },
+  "privacyMode": "summary_only",
+  "appVersion": "0.1.0"
+}

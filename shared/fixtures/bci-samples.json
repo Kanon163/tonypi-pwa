@@ -1,0 +1,223 @@
+{
+  "fixtureSchemaVersion": "0.1",
+  "contractRefs": ["BciSample", "SessionEvent"],
+  "levelId": "level_gonogo_crystal_v1",
+  "sessionId": "session_fixture_bci_001",
+  "deviceId": "bci_sim_001",
+  "scenarios": [
+    {
+      "id": "stable",
+      "label": "Stable simulated attention",
+      "description": "Normal signal with small attention changes.",
+      "sampleRateHz": 1,
+      "samples": [
+        {
+          "deviceId": "bci_sim_001",
+          "source": "simulated",
+          "attention": 68,
+          "relaxation": 52,
+          "signalQuality": 95,
+          "bandPower": {},
+          "raw": {},
+          "timestamp": "2026-05-08T12:00:00+08:00"
+        },
+        {
+          "deviceId": "bci_sim_001",
+          "source": "simulated",
+          "attention": 71,
+          "relaxation": 49,
+          "signalQuality": 94,
+          "bandPower": {},
+          "raw": {},
+          "timestamp": "2026-05-08T12:00:01+08:00"
+        },
+        {
+          "deviceId": "bci_sim_001",
+          "source": "simulated",
+          "attention": 70,
+          "relaxation": 50,
+          "signalQuality": 96,
+          "bandPower": {},
+          "raw": {},
+          "timestamp": "2026-05-08T12:00:02+08:00"
+        }
+      ],
+      "sessionEvents": [
+        {
+          "sessionId": "session_fixture_bci_001",
+          "levelId": "level_gonogo_crystal_v1",
+          "type": "bci_connected",
+          "payload": {
+            "deviceId": "bci_sim_001",
+            "source": "simulated"
+          },
+          "timestamp": "2026-05-08T12:00:00+08:00"
+        },
+        {
+          "sessionId": "session_fixture_bci_001",
+          "levelId": "level_gonogo_crystal_v1",
+          "type": "bci_attention_window_updated",
+          "payload": {
+            "windowSeconds": 3,
+            "attentionAvg": 70,
+            "signalQualityAvg": 95
+          },
+          "timestamp": "2026-05-08T12:00:03+08:00"
+        }
+      ]
+    },
+    {
+      "id": "fluctuating",
+      "label": "Fluctuating simulated attention",
+      "description": "Valid signal with wider attention changes.",
+      "sampleRateHz": 1,
+      "samples": [
+        {
+          "deviceId": "bci_sim_001",
+          "source": "simulated",
+          "attention": 42,
+          "relaxation": 63,
+          "signalQuality": 89,
+          "bandPower": {},
+          "raw": {},
+          "timestamp": "2026-05-08T12:01:00+08:00"
+        },
+        {
+          "deviceId": "bci_sim_001",
+          "source": "simulated",
+          "attention": 77,
+          "relaxation": 44,
+          "signalQuality": 90,
+          "bandPower": {},
+          "raw": {},
+          "timestamp": "2026-05-08T12:01:01+08:00"
+        },
+        {
+          "deviceId": "bci_sim_001",
+          "source": "simulated",
+          "attention": 55,
+          "relaxation": 58,
+          "signalQuality": 88,
+          "bandPower": {},
+          "raw": {},
+          "timestamp": "2026-05-08T12:01:02+08:00"
+        }
+      ],
+      "sessionEvents": [
+        {
+          "sessionId": "session_fixture_bci_001",
+          "levelId": "level_gonogo_crystal_v1",
+          "type": "bci_attention_window_updated",
+          "payload": {
+            "windowSeconds": 3,
+            "attentionAvg": 58,
+            "signalQualityAvg": 89
+          },
+          "timestamp": "2026-05-08T12:01:03+08:00"
+        }
+      ]
+    },
+    {
+      "id": "low_signal",
+      "label": "Low signal quality",
+      "description": "Signal quality drops below the usable threshold.",
+      "sampleRateHz": 1,
+      "samples": [
+        {
+          "deviceId": "bci_sim_001",
+          "source": "simulated",
+          "attention": null,
+          "relaxation": null,
+          "signalQuality": 38,
+          "bandPower": {},
+          "raw": {},
+          "timestamp": "2026-05-08T12:02:00+08:00"
+        },
+        {
+          "deviceId": "bci_sim_001",
+          "source": "simulated",
+          "attention": 36,
+          "relaxation": 60,
+          "signalQuality": 45,
+          "bandPower": {},
+          "raw": {},
+          "timestamp": "2026-05-08T12:02:01+08:00"
+        },
+        {
+          "deviceId": "bci_sim_001",
+          "source": "simulated",
+          "attention": null,
+          "relaxation": null,
+          "signalQuality": 34,
+          "bandPower": {},
+          "raw": {},
+          "timestamp": "2026-05-08T12:02:02+08:00"
+        }
+      ],
+      "sessionEvents": [
+        {
+          "sessionId": "session_fixture_bci_001",
+          "levelId": "level_gonogo_crystal_v1",
+          "type": "bci_signal_quality_changed",
+          "payload": {
+            "signalQualityAvg": 39,
+            "state": "low_signal",
+            "lowSignalSeconds": 3
+          },
+          "timestamp": "2026-05-08T12:02:03+08:00"
+        },
+        {
+          "sessionId": "session_fixture_bci_001",
+          "levelId": "level_gonogo_crystal_v1",
+          "type": "degraded_mode_entered",
+          "payload": {
+            "reason": "bci_low_signal",
+            "message": "BCI signal is unstable; continue training with reduced confidence."
+          },
+          "timestamp": "2026-05-08T12:02:04+08:00"
+        }
+      ]
+    },
+    {
+      "id": "disconnected",
+      "label": "Disconnected BCI",
+      "description": "Samples stop after a simulated device disconnect.",
+      "sampleRateHz": 1,
+      "samples": [
+        {
+          "deviceId": "bci_sim_001",
+          "source": "simulated",
+          "attention": 66,
+          "relaxation": 51,
+          "signalQuality": 92,
+          "bandPower": {},
+          "raw": {},
+          "timestamp": "2026-05-08T12:03:00+08:00"
+        }
+      ],
+      "sessionEvents": [
+        {
+          "sessionId": "session_fixture_bci_001",
+          "levelId": "level_gonogo_crystal_v1",
+          "type": "bci_disconnected",
+          "payload": {
+            "deviceId": "bci_sim_001",
+            "source": "simulated",
+            "reason": "simulated_disconnect"
+          },
+          "timestamp": "2026-05-08T12:03:01+08:00"
+        },
+        {
+          "sessionId": "session_fixture_bci_001",
+          "levelId": "level_gonogo_crystal_v1",
+          "type": "degraded_mode_entered",
+          "payload": {
+            "reason": "bci_disconnected",
+            "message": "BCI disconnected; keep the session running and mark report confidence as partial."
+          },
+          "timestamp": "2026-05-08T12:03:02+08:00"
+        }
+      ]
+    }
+  ]
+}

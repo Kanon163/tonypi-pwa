@@ -1,0 +1,111 @@
+{
+  "schemaVersion": "0.1",
+  "fixtureSource": "wave2_robot_bridge",
+  "mockOnly": true,
+  "notes": [
+    "These fixtures follow docs/CONTRACTS.md RobotCommand v0.1.",
+    "They do not prove real TonyPi bridge behavior.",
+    "Action group names are limited to the Wave 2 TonyPi whitelist."
+  ],
+  "commands": [
+    {
+      "case": "health_check_ap_ok",
+      "command": {
+        "id": "cmd_robot_health_001",
+        "type": "health_check",
+        "name": "health_check",
+        "params": {
+          "idempotencyKey": "robot_health_ap_001"
+        },
+        "priority": "normal",
+        "source": "pwa",
+        "sessionId": "session_gonogo_001",
+        "timestamp": "2026-05-08T12:00:00+08:00"
+      }
+    },
+    {
+      "case": "go_invite_ok",
+      "command": {
+        "id": "cmd_robot_go_001",
+        "type": "action_group",
+        "name": "go_invite",
+        "params": {
+          "durationMs": null,
+          "allowDuringVision": false,
+          "idempotencyKey": "level_gonogo_go_001"
+        },
+        "priority": "normal",
+        "source": "level_engine",
+        "sessionId": "session_gonogo_001",
+        "timestamp": "2026-05-08T12:00:04+08:00"
+      }
+    },
+    {
+      "case": "nogo_stop_busy",
+      "command": {
+        "id": "cmd_robot_nogo_001",
+        "type": "action_group",
+        "name": "nogo_stop",
+        "params": {
+          "durationMs": null,
+          "allowDuringVision": true,
+          "idempotencyKey": "level_gonogo_nogo_001"
+        },
+        "priority": "high",
+        "source": "level_engine",
+        "sessionId": "session_gonogo_001",
+        "timestamp": "2026-05-08T12:00:08+08:00"
+      }
+    },
+    {
+      "case": "scan_crystal_failed_missing_action_file",
+      "command": {
+        "id": "cmd_robot_scan_001",
+        "type": "action_group",
+        "name": "scan_crystal",
+        "params": {
+          "durationMs": null,
+          "allowDuringVision": false,
+          "idempotencyKey": "level_gonogo_scan_001"
+        },
+        "priority": "normal",
+        "source": "level_engine",
+        "sessionId": "session_gonogo_001",
+        "timestamp": "2026-05-08T12:00:12+08:00"
+      }
+    },
+    {
+      "case": "rest_unavailable_bridge_down",
+      "command": {
+        "id": "cmd_robot_rest_001",
+        "type": "action_group",
+        "name": "rest",
+        "params": {
+          "durationMs": null,
+          "allowDuringVision": true,
+          "idempotencyKey": "level_gonogo_rest_001"
+        },
+        "priority": "high",
+        "source": "level_engine",
+        "sessionId": "session_gonogo_001",
+        "timestamp": "2026-05-08T12:00:16+08:00"
+      }
+    },
+    {
+      "case": "stop_requested",
+      "command": {
+        "id": "cmd_robot_stop_001",
+        "type": "stop",
+        "name": "stop",
+        "params": {
+          "reason": "parent_cancelled",
+          "idempotencyKey": "level_gonogo_stop_001"
+        },
+        "priority": "high",
+        "source": "pwa",
+        "sessionId": "session_gonogo_001",
+        "timestamp": "2026-05-08T12:00:20+08:00"
+      }
+    }
+  ]
+}
