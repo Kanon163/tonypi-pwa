@@ -21,9 +21,10 @@ Wave 3 app-pwa 已完成安卓 PWA 访问链路，并合入可交互 Go/No-Go mo
 - `#2` 干预游戏运行时已通过 PR `#4` 合并到 `main`。
 - `#5` GitHub Pages 预览站点已通过 PR `#6` 完成。
 - 用户已在安卓手机上验证 Pages PWA 可正常使用。
+- 用户已验证可交互 Go/No-Go mock 训练路径可正常使用。
 - GitHub 仓库：`https://github.com/Kanon163/tonypi-pwa`
 - PWA Pages 预览目标：`https://kanon163.github.io/tonypi-pwa/workspaces/app-pwa/`
-- 当前开放 Issue：暂无 Wave 3 app-pwa 阻塞 Issue。
+- 当前开放 Issue：`#7` UX 精简验收，`#8` Robot mock 精简审查，`#9` BCI/report 精简审查。
 - 第二关默认节奏采用 `wave2_demo_default`。
 - Go/No-Go 扫描计数字段统一为 `scanCount`。
 - `camera_unavailable`、`operator_override_enabled`、`report_ready` 已进入契约。
@@ -32,12 +33,10 @@ Wave 3 app-pwa 已完成安卓 PWA 访问链路，并合入可交互 Go/No-Go mo
 
 - GitHub Pages 已部署成功，桌面复测根路径、PWA 路径、manifest、关卡 JSON 均为 200。
 - 安卓手机真实访问已通过用户验收。
-- 尚未由用户在安卓手机上验证可交互 Go/No-Go mock 训练路径。
-- `product-ux`、`robot-bridge`、`bci-cloud` 的 Wave 3 review 等用户完成运行时验收后启动。
+- `product-ux`、`robot-bridge`、`bci-cloud` 的 Wave 3 专项 review 待启动。
 - 真实硬件接入、Web Bluetooth、TonyPi stop 真实语义进入后续波次。
 
 ## 下一步
 
-1. 等待 Pages 部署最新 `main`。
-2. 用户测试可交互 Go/No-Go mock 训练路径。
-3. 通过后启动 `product-ux`、`robot-bridge`、`bci-cloud` 专项 review。
+1. 启动 `product-ux`、`robot-bridge`、`bci-cloud` 精简专项 review。
+2. 主控汇总 review 结果，决定是否进入 Wave 4 真实硬件替换。

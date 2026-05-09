@@ -2,7 +2,7 @@
 
 ## 目标
 
-审查 PWA 中 RobotBridge mock 是否符合机器人契约和动作边界。
+精简审查 PWA 中 RobotBridge mock 是否符合机器人契约和动作边界。
 
 ## 负责 agent
 
@@ -12,7 +12,7 @@
 
 - 检查 RobotCommand/RobotEvent 消费方式。
 - 检查动作白名单、busy、failed、unavailable、stop mock 语义。
-- 输出修正建议。
+- 输出最多 5 条必须修正项。
 
 ## 范围外
 
@@ -23,15 +23,16 @@
 ## 输入资料
 
 - `docs/CONTRACTS.md`
-- `workspaces/integration-review/WAVE2_REVIEW.md`
+- `docs/PROJECT_STATE.md`
 - `shared/fixtures/robot-commands.json`
 - `shared/fixtures/robot-events.json`
 - `shared/resources-index/tonypi-actions.md`
-- `tasks/0013` 的 Robot mock 实现说明
+- `workspaces/app-pwa/app.js`
+- 线上 PWA：`https://kanon163.github.io/tonypi-pwa/`
 
 ## 依赖
 
-- depends_on：`0013`
+- depends_on：`0013d`
 - outputs_to：`integration-review`
 
 ## 预期交付
@@ -46,7 +47,7 @@
 ## 验收方式
 
 - 明确 PASS / BLOCK / CONDITIONAL PASS。
-- 说明 mock 与真实硬件差距。
+- 说明 mock 与真实硬件差距，最多 5 条。
 
 ## 执行前风险判断
 

@@ -2,7 +2,7 @@
 
 ## 目标
 
-审查 PWA mock 切片是否符合家长端产品体验边界。
+精简审查当前线上 PWA 是否符合家长端产品体验边界。
 
 ## 负责 agent
 
@@ -12,7 +12,7 @@
 
 - 审查页面流程、文案、状态表达、降级提示。
 - 检查是否把儿童训练错误地迁移到手机。
-- 输出验收意见和必须修正项。
+- 输出最多 5 条必须修正项。
 
 ## 范围外
 
@@ -24,14 +24,13 @@
 
 - `docs/VISION.md`
 - `docs/CONTRACTS.md`
-- `workspaces/integration-review/WAVE2_REVIEW.md`
-- `workspaces/product-ux/GONOGO_DEMO_FLOW.md`
-- `tasks/0013` 的交付说明
-- PWA 可运行结果或截图
+- `docs/PROJECT_STATE.md`
+- 线上 PWA：`https://kanon163.github.io/tonypi-pwa/`
+- `workspaces/app-pwa/RUNBOOK.md`
 
 ## 依赖
 
-- depends_on：`0013`
+- depends_on：`0013c`、`0013d`、`0013e`
 - outputs_to：`integration-review`
 
 ## 预期交付
@@ -46,7 +45,7 @@
 ## 验收方式
 
 - 明确 PASS / BLOCK / CONDITIONAL PASS。
-- 列出必须修复项和可后置项。
+- 只列必须修复项；可后置项最多 3 条。
 
 ## 执行前风险判断
 
