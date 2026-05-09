@@ -44,7 +44,8 @@ const state = {
   installStatus: "未检测",
   accessUrl: "",
   bciConfidence: "正常",
-  robotIssue: ""
+  robotIssue: "",
+  finishReason: ""
 };
 
 function now() {
@@ -396,14 +397,25 @@ function simulateRobotUnavailable() {
 }
 
 function completeTraining() {
+  const completed = state.scanCount >= state.manifest.rules.totalScans;
   state.phase = "完成";
   state.endedAt = now();
+  state.finishReason = completed ? "completed" : "ended_early_by_parent";
+  if (!completed) {
+    addEvent("session_ended_early", {
+      reason: "parent_finished_before_target",
+      scanCount: state.scanCount,
+      totalScans: state.manifest.rules.totalScans
+    });
+  }
   addEvent("level_completed", {
-    success: true,
+    success: completed,
     scanCount: state.scanCount,
+    totalScans: state.manifest.rules.totalScans,
     violations: state.violations,
     durationSec: 180,
-    degradedMode: state.degraded
+    degradedMode: state.degraded,
+    reason: state.finishReason
   });
   addEvent("bci_summary_ready", state.bciSummary);
   addEvent("session_completed", { completedLevels: 1 });
@@ -447,6 +459,9 @@ function buildReport() {
     },
     warnings: [
       ...state.fixtures.reportResponse.warnings,
+      ...(state.finishReason !== "completed"
+        ? [{ code: "SESSION_ENDED_EARLY", message: "本次训练提前结束，未达到 6 次扫描目标。" }]
+        : []),
       ...(state.degraded
         ? [{ code: "DEGRADED_MODE", message: "本次演示启用了人工扫描覆盖。" }]
         : []),
@@ -458,7 +473,23 @@ function buildReport() {
         : [])
     ]
   };
-  addEvent("report_ready", { reportId: state.reportResponse.reportId, status: "ready" });
+  state.reportResponse.summary =
+    state.finishReason === "completed"
+      ? state.fixtures.reportResponse.summary
+      : `本次训练提前结束。孩子完成了 ${state.scanCount} / ${state.manifest.rules.totalScans} 次晶石扫描，记录已保留，但不应视为完整训练。`;
+  state.reportResponse.highlights =
+    state.finishReason === "completed"
+      ? state.fixtures.reportResponse.highlights
+      : [
+          `完成 ${state.scanCount} / ${state.manifest.rules.totalScans} 次扫描。`,
+          "本次为提前结束记录，报告仅用于回顾过程。",
+          `训练中出现 ${state.violations} 次 No-Go 提前反应。`
+        ];
+  addEvent("report_ready", {
+    reportId: state.reportResponse.reportId,
+    status: "ready",
+    outcome: state.finishReason
+  });
   persistSession();
 }
 
@@ -481,6 +512,7 @@ function resetDemo() {
   state.violations = 0;
   state.reportRequest = null;
   state.reportResponse = null;
+  state.finishReason = "";
   updateBciSummary("stable");
   render();
 }
@@ -641,12 +673,13 @@ function renderTraining() {
 }
 
 function renderComplete() {
+  const completed = state.finishReason === "completed";
   return `
     <main class="page">
       <section class="hero">
-        <span class="eyebrow">已完成</span>
-        <h1>训练完成</h1>
-        <p>已生成本次训练摘要，报告会标注模拟或降级数据。</p>
+        <span class="eyebrow">${completed ? "已完成" : "提前结束"}</span>
+        <h1>${completed ? "训练完成" : "训练未完成"}</h1>
+        <p>${completed ? "已生成本次训练摘要，报告会标注模拟或降级数据。" : "本次训练提前结束，记录会保留，但不会标记为成功完成。"}</p>
       </section>
       <section class="mobile-section">
         <div class="panel stack">
@@ -660,7 +693,7 @@ function renderComplete() {
         </div>
         <div class="panel stack">
           <h2>本次观察</h2>
-          <p>孩子完成了本段练习。手机端已保留训练记录，并准备好报告摘要。</p>
+          <p>${completed ? "孩子完成了本段练习。手机端已保留训练记录，并准备好报告摘要。" : `孩子完成了 ${state.scanCount} / ${state.manifest.rules.totalScans} 次扫描，手机端已保留未完成记录。`}</p>
           ${state.degraded ? `<p class="warning">${state.degradationReason}</p>` : ""}
         </div>
       </section>
@@ -756,10 +789,11 @@ function activityText(event) {
     bci_attention_window_updated: `注意力记录已更新，当前均值 ${payload.attentionAvg ?? state.bciSummary.attentionAvg}。`,
     bci_signal_quality_changed: "BCI 信号偏低，报告会降低可信度。",
     robot_unavailable: "TonyPi 暂时不可用，已切换降级路径。",
+    session_ended_early: "训练提前结束，已保留未完成记录。",
     camera_unavailable: "视觉识别不可用。",
     operator_override_enabled: "已启用人工扫描覆盖。",
     degraded_mode_entered: "训练进入降级模式，仍可继续完成演示。",
-    level_completed: "本关训练已完成。",
+    level_completed: payload.success === false ? "本关未完成，已生成过程记录。" : "本关训练已完成。",
     bci_summary_ready: "注意力摘要已生成。",
     report_uploaded: "训练摘要已提交到报告服务。",
     report_ready: "报告摘要已准备好。"

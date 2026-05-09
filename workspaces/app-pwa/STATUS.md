@@ -21,6 +21,7 @@ Wave 3 0013c/0013d 已完成。
 - HTTP 静态访问通过：app、manifest、service worker 均返回 200。
 - 交互式 smoke test 通过：开始后不自动完成；手动输入完成 `scanCount=6/6`；No-Go 违规扣生命；BCI 低信号和 Robot 不可用进入报告 warnings；未渲染 `raw`。
 - 代码检查通过：无 `setInterval`、`runNextStep`、`flow` 残留。
+- PR #4 审查修复：`scanCount < totalScans` 提前结束时 `level_completed.success=false`，并生成 `session_ended_early` 与未完成报告文案。
 
 ## 下一步
 
