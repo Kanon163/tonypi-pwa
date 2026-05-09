@@ -20,6 +20,7 @@ Wave 3 app-pwa 已完成手机端视觉纠偏，并开始补齐安卓 PWA 运行
 - `#1` 安卓手机 PWA 运行链路已通过 PR `#3` 合并到 `main`。
 - `#2` 干预游戏运行时已提交 PR `#4`，但因提前结束训练仍会标记 `success=true`，暂缓合并。
 - `#5` GitHub Pages 预览站点已通过 PR `#6` 完成。
+- 用户已在安卓手机上验证 Pages PWA 可正常使用。
 - GitHub 仓库：`https://github.com/Kanon163/tonypi-pwa`
 - PWA Pages 预览目标：`https://kanon163.github.io/tonypi-pwa/workspaces/app-pwa/`
 - 当前开放 Issue：`#2` 干预游戏运行时。
@@ -30,13 +31,13 @@ Wave 3 app-pwa 已完成手机端视觉纠偏，并开始补齐安卓 PWA 运行
 ## 当前阻塞
 
 - GitHub Pages 已部署成功，桌面复测根路径、PWA 路径、manifest、关卡 JSON 均为 200。
-- 尚未由安卓手机真实验证 Pages 访问、安装入口和离线刷新。
+- 安卓手机真实访问已通过用户验收。
 - 尚未实现可交互干预游戏运行时。
 - `product-ux`、`robot-bridge`、`bci-cloud` 的 Wave 3 review 暂缓，等 `0013c` 和 `0013d` 完成后再做。
 - 真实硬件接入、Web Bluetooth、TonyPi stop 真实语义进入后续波次。
 
 ## 下一步
 
-1. 用户用安卓手机测试 Pages 预览 URL、安装入口和离线刷新。
-2. 让 `app-pwa` 修复 PR `#4` 的提前结束语义，并更新到最新 `main`。
-3. `#4` 合并后再启动专项 review。
+1. 让 `app-pwa` 修复 PR `#4` 的提前结束语义，并更新到最新 `main`。
+2. 合并 `#4` 后，用户测试可交互 Go/No-Go mock 训练路径。
+3. 通过后启动 `product-ux`、`robot-bridge`、`bci-cloud` 专项 review。
