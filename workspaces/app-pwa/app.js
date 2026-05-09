@@ -44,6 +44,7 @@ const state = {
   endedAt: null,
   deferredInstallPrompt: null,
   installStatus: "未检测",
+  accessUrl: "",
   bciConfidence: "正常",
   robotIssue: ""
 };
@@ -189,6 +190,7 @@ function refreshPwaStatus() {
   } else {
     state.installStatus = "浏览器菜单可安装";
   }
+  state.accessUrl = window.location.href;
 }
 
 async function installPwa() {
@@ -627,6 +629,7 @@ function renderPrepare() {
         <div class="panel stack">
           <h3>手机安装状态</h3>
           <p>${state.installStatus}</p>
+          <p class="label">当前地址：${state.accessUrl}</p>
           <button class="secondary" data-action="install">添加到主屏幕</button>
         </div>
       </section>
