@@ -6,6 +6,8 @@ const APP_ASSETS = [
   "./app.js",
   "./manifest.webmanifest",
   "./icon.svg",
+  "./icon-192.png",
+  "./icon-512.png",
   "../../shared/level-manifests/level_gonogo_crystal_v1.json",
   "../../shared/fixtures/bci-samples.json",
   "../../shared/fixtures/robot-commands.json",
