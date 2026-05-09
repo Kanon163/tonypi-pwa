@@ -38,33 +38,15 @@ const state = {
   violations: 0,
   reportRequest: null,
   reportResponse: null,
-  timer: null,
-  stepIndex: 0,
   startedAt: null,
   endedAt: null,
   deferredInstallPrompt: null,
   installStatus: "未检测",
   accessUrl: "",
   bciConfidence: "正常",
-  robotIssue: ""
+  robotIssue: "",
+  finishReason: ""
 };
-
-const flow = [
-  { phase: "规则说明", event: "phase_changed", robotCase: "go_invite_ok" },
-  { phase: "Go", event: "state_go", robotCase: "go_invite_ok" },
-  { phase: "扫描", event: "scan_requested", robotCase: "go_invite_ok", scan: true },
-  { phase: "No-Go", event: "state_nogo", robotCase: "nogo_stop_busy", violation: true },
-  { phase: "Go", event: "state_go", robotCase: "go_invite_ok" },
-  { phase: "扫描", event: "scan_requested", robotCase: "go_invite_ok", scan: true },
-  { phase: "Go", event: "state_go", robotCase: "go_invite_ok" },
-  { phase: "扫描", event: "scan_requested", robotCase: "go_invite_ok", scan: true },
-  { phase: "No-Go", event: "state_nogo", robotCase: "go_invite_ok" },
-  { phase: "Go", event: "state_go", robotCase: "go_invite_ok" },
-  { phase: "扫描", event: "scan_requested", robotCase: "go_invite_ok", scan: true },
-  { phase: "Go", event: "state_go", robotCase: "go_invite_ok" },
-  { phase: "扫描", event: "scan_requested", robotCase: "go_invite_ok", scan: true },
-  { phase: "扫描", event: "scan_requested", robotCase: "go_invite_ok", scan: true }
-];
 
 function now() {
   return new Date().toISOString();
@@ -228,7 +210,6 @@ function startTraining() {
   state.scanCount = 0;
   state.lives = state.manifest.rules.initialLives;
   state.phase = "规则说明";
-  state.stepIndex = 0;
   state.startedAt = now();
   state.events = [];
   state.reportRequest = null;
@@ -254,61 +235,6 @@ function startTraining() {
       message: state.degradationReason
     });
   }
-  render();
-}
-
-function runNextStep() {
-  if (state.page === "complete" || state.page === "report") return;
-  if (state.scanCount >= state.manifest.rules.totalScans) {
-    completeTraining();
-    return;
-  }
-
-  const step = flow[state.stepIndex % flow.length];
-  state.phase = step.phase;
-  addEvent(step.event, {
-    phase: step.phase,
-    state: step.phase.toUpperCase(),
-    scanCount: state.scanCount,
-    lives: state.lives
-  });
-
-  const command = robotCommandByCase(step.robotCase);
-  const eventCase = step.robotCase === "nogo_stop_busy" ? "nogo_stop_busy" : "go_invite_finished_ok";
-  const robotEvent = robotEventByCase(eventCase);
-  state.robotState = robotEvent?.status === "busy" ? "busy" : robotEvent?.data?.bridgeState ?? "idle";
-
-  if (command?.name) {
-    addEvent("robot_command_mocked", {
-      commandName: command.name,
-      commandType: command.type,
-      robotStatus: robotEvent?.status ?? "ok"
-    });
-  }
-
-  if (step.violation && state.violations === 0) {
-    state.violations += 1;
-    state.lives = Math.max(0, state.lives - 1);
-    addEvent("nogo_violation", {
-      lives: state.lives,
-      markerId: state.manifest.rules.targetMarkerId,
-      markerInCenter: true,
-      scanCount: state.scanCount
-    });
-  }
-
-  if (step.scan) {
-    state.scanCount = Math.min(state.manifest.rules.totalScans, state.scanCount + 1);
-    addEvent("scan_success", {
-      scanCount: state.scanCount,
-      totalScans: state.manifest.rules.totalScans,
-      markerId: state.manifest.rules.targetMarkerId,
-      scanHoldSec: state.manifest.rules.timing.scanHoldSec
-    });
-    updateBciSummary(state.scanCount === 4 ? "fluctuating" : "stable");
-  }
-
-  state.stepIndex += 1;
   render();
 }
 
@@ -471,18 +397,25 @@ function simulateRobotUnavailable() {
 }
 
 function completeTraining() {
-  if (state.timer) {
-    window.clearInterval(state.timer);
-    state.timer = null;
-  }
+  const completed = state.scanCount >= state.manifest.rules.totalScans;
   state.phase = "完成";
   state.endedAt = now();
+  state.finishReason = completed ? "completed" : "ended_early_by_parent";
+  if (!completed) {
+    addEvent("session_ended_early", {
+      reason: "parent_finished_before_target",
+      scanCount: state.scanCount,
+      totalScans: state.manifest.rules.totalScans
+    });
+  }
   addEvent("level_completed", {
-    success: true,
+    success: completed,
     scanCount: state.scanCount,
+    totalScans: state.manifest.rules.totalScans,
     violations: state.violations,
     durationSec: 180,
-    degradedMode: state.degraded
+    degradedMode: state.degraded,
+    reason: state.finishReason
   });
   addEvent("bci_summary_ready", state.bciSummary);
   addEvent("session_completed", { completedLevels: 1 });
@@ -526,6 +459,9 @@ function buildReport() {
     },
     warnings: [
       ...state.fixtures.reportResponse.warnings,
+      ...(state.finishReason !== "completed"
+        ? [{ code: "SESSION_ENDED_EARLY", message: "本次训练提前结束，未达到 6 次扫描目标。" }]
+        : []),
       ...(state.degraded
         ? [{ code: "DEGRADED_MODE", message: "本次演示启用了人工扫描覆盖。" }]
         : []),
@@ -537,12 +473,27 @@ function buildReport() {
         : [])
     ]
   };
-  addEvent("report_ready", { reportId: state.reportResponse.reportId, status: "ready" });
+  state.reportResponse.summary =
+    state.finishReason === "completed"
+      ? state.fixtures.reportResponse.summary
+      : `本次训练提前结束。孩子完成了 ${state.scanCount} / ${state.manifest.rules.totalScans} 次晶石扫描，记录已保留，但不应视为完整训练。`;
+  state.reportResponse.highlights =
+    state.finishReason === "completed"
+      ? state.fixtures.reportResponse.highlights
+      : [
+          `完成 ${state.scanCount} / ${state.manifest.rules.totalScans} 次扫描。`,
+          "本次为提前结束记录，报告仅用于回顾过程。",
+          `训练中出现 ${state.violations} 次 No-Go 提前反应。`
+        ];
+  addEvent("report_ready", {
+    reportId: state.reportResponse.reportId,
+    status: "ready",
+    outcome: state.finishReason
+  });
   persistSession();
 }
 
 function resetDemo() {
-  if (state.timer) window.clearInterval(state.timer);
   state.page = "prepare";
   state.sessionId = `session_mock_${Date.now()}`;
   state.devices = {
@@ -561,6 +512,7 @@ function resetDemo() {
   state.violations = 0;
   state.reportRequest = null;
   state.reportResponse = null;
+  state.finishReason = "";
   updateBciSummary("stable");
   render();
 }
@@ -685,6 +637,8 @@ function renderTraining() {
       </section>
       <section class="mobile-section">
         <div class="panel stack">
+          <h2>交互运行时</h2>
+          <p class="label">训练不会自动通关；请按 TonyPi mock 信号或演示需要记录扫描、等待和降级。</p>
           <div class="split">
             <div class="metric"><span class="label">扫描进度</span><b>${state.scanCount} / ${total}</b></div>
             <div class="metric"><span class="label">生命值</span><b>${state.lives} / ${state.manifest.rules.initialLives}</b></div>
@@ -719,12 +673,13 @@ function renderTraining() {
 }
 
 function renderComplete() {
+  const completed = state.finishReason === "completed";
   return `
     <main class="page">
       <section class="hero">
-        <span class="eyebrow">已完成</span>
-        <h1>训练完成</h1>
-        <p>已生成本次训练摘要，报告会标注模拟或降级数据。</p>
+        <span class="eyebrow">${completed ? "已完成" : "提前结束"}</span>
+        <h1>${completed ? "训练完成" : "训练未完成"}</h1>
+        <p>${completed ? "已生成本次训练摘要，报告会标注模拟或降级数据。" : "本次训练提前结束，记录会保留，但不会标记为成功完成。"}</p>
       </section>
       <section class="mobile-section">
         <div class="panel stack">
@@ -738,7 +693,7 @@ function renderComplete() {
         </div>
         <div class="panel stack">
           <h2>本次观察</h2>
-          <p>孩子完成了本段练习。手机端已保留训练记录，并准备好报告摘要。</p>
+          <p>${completed ? "孩子完成了本段练习。手机端已保留训练记录，并准备好报告摘要。" : `孩子完成了 ${state.scanCount} / ${state.manifest.rules.totalScans} 次扫描，手机端已保留未完成记录。`}</p>
           ${state.degraded ? `<p class="warning">${state.degradationReason}</p>` : ""}
         </div>
       </section>
@@ -834,10 +789,11 @@ function activityText(event) {
     bci_attention_window_updated: `注意力记录已更新，当前均值 ${payload.attentionAvg ?? state.bciSummary.attentionAvg}。`,
     bci_signal_quality_changed: "BCI 信号偏低，报告会降低可信度。",
     robot_unavailable: "TonyPi 暂时不可用，已切换降级路径。",
+    session_ended_early: "训练提前结束，已保留未完成记录。",
     camera_unavailable: "视觉识别不可用。",
     operator_override_enabled: "已启用人工扫描覆盖。",
     degraded_mode_entered: "训练进入降级模式，仍可继续完成演示。",
-    level_completed: "本关训练已完成。",
+    level_completed: payload.success === false ? "本关未完成，已生成过程记录。" : "本关训练已完成。",
     bci_summary_ready: "注意力摘要已生成。",
     report_uploaded: "训练摘要已提交到报告服务。",
     report_ready: "报告摘要已准备好。"
