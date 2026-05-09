@@ -62,7 +62,16 @@ PWA 预览优先使用 GitHub Pages。
 
 - `https://kanon163.github.io/tonypi-pwa/workspaces/app-pwa/`
 
-仓库包含 `.github/workflows/pages.yml`，从 `main` 部署整个仓库，保证 PWA 可以读取 `shared/`。
+仓库包含 `.github/workflows/pages.yml`，从 `main` 构建 Pages artifact。
+
+发布内容仅包含：
+
+- `workspaces/app-pwa/` 的 PWA 运行文件。
+- `shared/fixtures/*.json`
+- `shared/level-manifests/*.json`
+- 根路径跳转页。
+
+不发布 `docs/`、`tasks/`、agent 上报文档和参考资料。
 
 ## 主控职责
 
