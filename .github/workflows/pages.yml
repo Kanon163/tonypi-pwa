@@ -25,10 +25,43 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Pages
         uses: actions/configure-pages@v5
+      - name: Build public artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf public
+          mkdir -p public/workspaces/app-pwa
+          mkdir -p public/shared/fixtures
+          mkdir -p public/shared/level-manifests
+          cp workspaces/app-pwa/index.html public/workspaces/app-pwa/
+          cp workspaces/app-pwa/styles.css public/workspaces/app-pwa/
+          cp workspaces/app-pwa/app.js public/workspaces/app-pwa/
+          cp workspaces/app-pwa/sw.js public/workspaces/app-pwa/
+          cp workspaces/app-pwa/manifest.webmanifest public/workspaces/app-pwa/
+          cp workspaces/app-pwa/icon.svg public/workspaces/app-pwa/
+          cp workspaces/app-pwa/icon-192.png public/workspaces/app-pwa/
+          cp workspaces/app-pwa/icon-512.png public/workspaces/app-pwa/
+          cp shared/fixtures/*.json public/shared/fixtures/
+          cp shared/level-manifests/*.json public/shared/level-manifests/
+          touch public/.nojekyll
+          cat > public/index.html <<'HTML'
+          <!doctype html>
+          <html lang="zh-CN">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
+              <meta http-equiv="refresh" content="0; url=./workspaces/app-pwa/" />
+              <title>TonyPi PWA</title>
+            </head>
+            <body>
+              <a href="./workspaces/app-pwa/">打开 TonyPi PWA</a>
+            </body>
+          </html>
+          HTML
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "."
+          path: "public"
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
