@@ -1,0 +1,41 @@
+name: Agent task
+description: 给单个 agent 的可执行任务
+title: "[task] "
+labels: ["agent-task"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: 目标
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 范围内 / 范围外
+    validations:
+      required: true
+  - type: textarea
+    id: inputs
+    attributes:
+      label: 输入资料
+    validations:
+      required: true
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: 预期交付
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收方式
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: 风险判断
+    validations:
+      required: true
