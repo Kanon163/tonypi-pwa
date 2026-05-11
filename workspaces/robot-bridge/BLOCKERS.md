@@ -1,10 +1,11 @@
 # BLOCKERS
 
-## 需要决策
+## 当前阻塞
 
-- 是否允许 `health_check` / `stop` 使用非动作白名单的 `name` 值：`health_check`、`stop`。
+- app-pwa 当前 Robot mock 消费不足，Issue #8 判定 `BLOCK`。
+- 必须修正项见 `WAVE3_ROBOT_REVIEW.md`。
 
-## 外部依赖
+## 非本轮阻塞
 
 - 真实 TonyPi 上验证 `AGC.runActionGroup` 的阻塞、并发、停止行为。
 - 确认动作组文件复制到 `/home/pi/TonyPi/ActionGroups` 后名称完全匹配。

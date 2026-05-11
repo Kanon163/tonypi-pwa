@@ -2,8 +2,10 @@
 
 ## 当前阻塞
 
-- 安卓手机真实访问和 PWA 安装链路未验证。
-- 干预游戏运行时未实现，当前只是顺序播放演示。
+- Robot mock 未完整消费 `RobotCommand` / `RobotEvent` 契约：`scan_crystal`、`failed`、`stop` 路径缺失。
+- BCI mock 未消费断连场景，样本可能跨 session 累积。
+- 低信号/降级报告主摘要与 warning 可能矛盾。
+- 家长端仍暴露工程文案和演示控制台语义。
 
 ## 后续阻塞
 

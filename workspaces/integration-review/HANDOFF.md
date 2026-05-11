@@ -20,7 +20,7 @@ Wave 2 已完成审查，结论为 CONDITIONAL PASS。
 
 ## 当前审查结论
 
-- `0013b` 手机视觉形态纠偏通过。
-- 但安卓手机真实运行/安装未验证。
-- 干预游戏仍是顺序播放演示，未形成可交互运行时。
-- 先执行 `0013c` 和 `0013d`，再做专项 review。
+- Wave 3 手机访问和可交互 Go/No-Go mock 已通过用户测试。
+- 专项 review 已完成：UX CONDITIONAL PASS，Robot mock BLOCK，BCI/report CONDITIONAL PASS。
+- 当前不得进入 Wave 4。
+- 先执行 `0018`，修复 Robot mock、BCI/report 和 UX 表达层问题。

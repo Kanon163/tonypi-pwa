@@ -2,14 +2,14 @@
 
 ## 当前状态
 
-Wave 2 robot fixtures 已完成。
+Issue #8 / task 0015 Robot mock 审查已完成。
 
 ## 最近产出
 
-- 已产出 `shared/fixtures/robot-commands.json`。
-- 已产出 `shared/fixtures/robot-events.json`。
-- 已产出 `shared/resources-index/tonypi-actions.md`。
+- 已产出 `WAVE3_ROBOT_REVIEW.md`。
+- 结论：`BLOCK`。
+- 未接真实 TonyPi，未修改 PWA 代码。
 
 ## 下一步
 
-- 等待 `integration-review` 审查 fixtures 与 `docs/CONTRACTS.md` 的一致性。
+- 等待 app-pwa 修正 Robot mock 契约消费问题后复审。

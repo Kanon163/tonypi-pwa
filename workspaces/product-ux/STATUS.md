@@ -2,15 +2,16 @@
 
 ## 当前状态
 
-Wave 2 Go/No-Go 家长端流程已完成。
+Issue #7 / task 0014 UX 精简验收已完成。
 
 ## 最近产出
 
-- 产出 `GONOGO_DEMO_FLOW.md`：细化训练准备、设备连接、训练中、异常、完成、报告摘要和演示脚本。
-- 基于 `level_gonogo_crystal_v1.json` 与 `report-response.json` 明确了 Wave 3 PWA 所需页面状态。
+- 产出 `WAVE3_UX_REVIEW.md`。
+- 线上 PWA 路径完成最小复查：准备、连接、降级、训练、完成、报告。
+- 结论：CONDITIONAL PASS，列出 3 条必须修正项。
 - 更新 `HANDOFF.md` 与 `BLOCKERS.md`。
 
 ## 下一步
 
-- 等待 `integration-review` 审查 Wave 2 产物。
-- Wave 3 可据此实现家长端最小闭环。
+- 等待 `integration-review` 汇总 Issue #7、#8、#9。
+- app-pwa 修正家长端工程文案、演示控制分区、报告数值一致性。

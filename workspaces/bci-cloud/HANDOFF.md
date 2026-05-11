@@ -2,15 +2,16 @@
 
 ## 给 app-pwa
 
-- 可直接使用 `shared/fixtures/bci-samples.json` 驱动 MockBciSource。
-- 场景 ID：`stable`、`fluctuating`、`low_signal`、`disconnected`。
-- `report-request.json` 不包含逐条 BCI `raw`，只包含事件和 `bciSummary`。
-- `report-response.json` 可用于家长端报告摘要页。
+- Issue #9 审查结论为 `CONDITIONAL PASS`。
+- 必须修正 BCI 样本跨 session 累积：每次训练开始时清空本 session 样本并重新计算摘要。
+- 必须消费 `disconnected` fixture 并产生 `bci_disconnected` / 降级提示。
+- 低信号或降级时，报告主摘要/重点文案不能继续表达“整体稳定”。
 
 ## 给 integration-review
 
-- 报告返回契约仍未进入 `docs/CONTRACTS.md`，本次 fixture 暂用 `reportSchemaVersion`、`status`、`summary`、`highlights`、`metrics`、`sections`、`warnings`。
-- `bci-samples.json` 为便于验收，在每个场景内同时给出 `BciSample` 和相关 `SessionEvent`。
+- 审查未提出契约变更；仅指出 app-pwa 对既有 fixtures/契约的消费缺口。
+- `ReportRequest` 未发现逐条 `raw` 上传。
+- `ReportResponse` 已有 `SIMULATED_DATA` 警告，医学判断边界当前可接受。
 
 ## 给 robot-bridge / level-content
 

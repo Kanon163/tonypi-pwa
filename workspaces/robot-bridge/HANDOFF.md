@@ -2,17 +2,13 @@
 
 ## 给 integration-review
 
-- `robot-commands.json` 和 `robot-events.json` 已覆盖 `ok`、`busy`、`failed`、`unavailable`、`health_report`。
-- fixtures 使用 wrapper：每项包含 `case` 和纯 `command`/`event` 对象，便于测试消费。
-- `stop` fixture 只声明 mock 语义：停止接收后续动作；真实中断能力未验证。
-- 未修改 `docs/CONTRACTS.md`。
-
-## 给 level-content
-
-- Wave 3 Go/No-Go 可用动作见 `shared/resources-index/tonypi-actions.md`。
-- `nogo_stop`、`rest`、`encourage_retry` 标为可在识别窗口中执行；其他动作默认不在识别窗口中执行。
+- Issue #8 审查结论为 `BLOCK`。
+- 阻塞原因限定为 mock 契约消费不足，不包括真实 TonyPi 未验证项。
+- 必须修正项共 4 条，见 `WAVE3_ROBOT_REVIEW.md`。
+- 未修改 `docs/CONTRACTS.md`，未修改 PWA 代码。
 
 ## 给 app-pwa
 
-- 可用 `shared/fixtures/robot-events.json` 模拟 RobotBridge：正常、忙碌、缺动作文件、桥不可达、停止请求。
-- 健康检查事件包含 `networkMode`、`bridgeState`、`robotIp`、`cameraReady`、`missingActions`、`lastError`。
+- 扫描路径需要消费 `scan_crystal`。
+- 需要可操作的 `failed` 和 `stop` mock 路径。
+- RobotEvent 关键字段需要保留到训练事件或报告设备摘要。
