@@ -58,6 +58,23 @@
       }
     },
     {
+      "case": "scan_crystal_ok",
+      "command": {
+        "id": "cmd_robot_scan_ok_001",
+        "type": "action_group",
+        "name": "scan_crystal",
+        "params": {
+          "durationMs": null,
+          "allowDuringVision": false,
+          "idempotencyKey": "level_gonogo_scan_ok_001"
+        },
+        "priority": "normal",
+        "source": "level_engine",
+        "sessionId": "session_gonogo_001",
+        "timestamp": "2026-05-08T12:00:11+08:00"
+      }
+    },
+    {
       "case": "scan_crystal_failed_missing_action_file",
       "command": {
         "id": "cmd_robot_scan_001",

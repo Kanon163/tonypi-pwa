@@ -2,29 +2,25 @@
 
 ## 当前状态
 
-Wave 3 0013c/0013d 已完成。
+Issue #10 / 0018 已完成本地修复，等待 PR 审查。
 
-## 最近产出
+## 本次修复
 
-- 启动命令改为 `python -m http.server 8787 --bind 0.0.0.0`，支持同局域网手机访问。
-- `RUNBOOK.md` 已补充安卓手机访问、HTTPS/PWA 安装限制和移动视口验证。
-- 页面新增“手机安装状态”和“添加到主屏幕”入口。
-- 训练运行时已从自动顺序播放改为交互式 Go/No-Go：切换提示、扫描成功、提前行动、BCI 低信号、TonyPi 不可用。
-- 已移除旧的定时顺序播放运行时代码，开始训练后不会自动通关。
-- BCI 低信号会降低报告可信度提示；Robot 不可用会进入可解释降级。
-- 保留 6 次扫描、BCI 摘要、Robot mock、报告摘要、降级场景。
-- 未读取或修改 Wave 1 冻结产物。
+- `scan_requested` 改为消费 `scan_crystal` RobotCommand/RobotEvent。
+- 增加可操作的 `scan_crystal failed`、`stop_ack_ok`、BCI 断连降级路径。
+- RobotEvent 关键字段写入训练事件与报告 `deviceSummary.robot.lastEvents`。
+- 训练开始清空本 session BCI 样本，报告只使用本轮摘要。
+- 低信号/断连时报告摘要、重点和 warning 保持一致。
+- 家长主界面改为监看优先，演示控制折叠到服务人员区。
+- Service Worker cache 更新到 `tonypi-pwa-mock-v4`，降低手机旧缓存风险。
 
 ## 验证
 
 - `node --check workspaces/app-pwa/app.js` 通过。
-- HTTP 静态访问通过：app、manifest、service worker 均返回 200。
-- 交互式 smoke test 通过：开始后不自动完成；手动输入完成 `scanCount=6/6`；No-Go 违规扣生命；BCI 低信号和 Robot 不可用进入报告 warnings；未渲染 `raw`。
-- 代码检查通过：无 `setInterval`、`runNextStep`、`flow` 残留。
-- PR #4 审查修复：`scanCount < totalScans` 提前结束时 `level_completed.success=false`，并生成 `session_ended_early` 与未完成报告文案。
+- `shared/fixtures/robot-commands.json`、`shared/fixtures/robot-events.json` JSON 解析通过。
+- 本地静态访问 `http://127.0.0.1:8787/workspaces/app-pwa/` 返回 200。
+- 代码检查确认 `scan_crystal_ok`、`scan_crystal_failed_missing_action_file`、`stop_ack_ok`、`bci-disconnect` 均有运行入口。
 
 ## 下一步
 
-- 等待用户用安卓手机同局域网访问验证。
-- 若需要验证 PWA 安装，请使用 HTTPS 隧道或受信任证书环境。
-- 后续可启动 UX、Robot、BCI 专项 review。
+- 等待主控复审 Robot mock BLOCK 是否清除。

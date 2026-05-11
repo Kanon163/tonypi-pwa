@@ -44,7 +44,9 @@ const state = {
   installStatus: "未检测",
   accessUrl: "",
   bciConfidence: "正常",
+  bciDisconnected: false,
   robotIssue: "",
+  robotEvents: [],
   finishReason: ""
 };
 
@@ -74,6 +76,7 @@ function persistSession() {
     degraded: state.degraded,
     events: state.events,
     bciSummary: state.bciSummary,
+    robotEvents: state.robotEvents,
     reportRequest: state.reportRequest,
     reportResponse: state.reportResponse
   };
@@ -99,14 +102,39 @@ async function loadData() {
   state.manifest = manifest;
   state.fixtures = { bci, robotCommands, robotEvents, reportRequest, reportResponse };
   state.lives = manifest.rules.initialLives;
-  updateBciSummary("stable");
   state.loaded = true;
   render();
 }
 
-function updateBciSummary(scenarioId = "stable") {
+function emptyBciSummary() {
+  return {
+    sampleCount: 0,
+    validSampleRate: 0,
+    attentionAvg: 0,
+    attentionMin: null,
+    attentionMax: null,
+    signalQualityAvg: 0,
+    lowSignalSeconds: 0,
+    source: "simulated"
+  };
+}
+
+function appendFixtureEvents(scenario) {
+  scenario.sessionEvents?.forEach((fixtureEvent) => {
+    addEvent(fixtureEvent.type, {
+      ...(fixtureEvent.payload ?? {}),
+      fixtureScenario: scenario.id
+    });
+  });
+}
+
+function updateBciSummary(scenarioId = "stable", options = {}) {
   const scenario = state.fixtures.bci?.scenarios?.find((item) => item.id === scenarioId);
   if (!scenario) return;
+  if (options.reset) {
+    state.samples = [];
+    state.bciSummary = emptyBciSummary();
+  }
   const samples = scenario.samples;
   state.samples = state.samples.concat(samples);
   const valid = state.samples.filter((sample) => typeof sample.attention === "number");
@@ -133,6 +161,7 @@ function updateBciSummary(scenarioId = "stable") {
     signalQualityAvg: state.bciSummary.signalQualityAvg,
     source: "simulated"
   });
+  if (options.fixtureEvents) appendFixtureEvents(scenario);
 }
 
 function robotEventByCase(caseName) {
@@ -143,17 +172,42 @@ function robotCommandByCase(caseName) {
   return state.fixtures.robotCommands.commands.find((item) => item.case === caseName)?.command;
 }
 
+function robotEventPayload(command, robotEvent) {
+  const data = robotEvent?.data ?? {};
+  return {
+    commandId: robotEvent?.commandId ?? command?.id ?? null,
+    commandType: command?.type ?? null,
+    commandName: command?.name ?? null,
+    eventId: robotEvent?.id ?? null,
+    eventType: robotEvent?.type ?? null,
+    status: robotEvent?.status ?? "ok",
+    bridgeState: data.bridgeState ?? null,
+    networkMode: data.networkMode ?? null,
+    robotIp: data.robotIp ?? null,
+    cameraReady: data.cameraReady ?? null,
+    errorCode: data.errorCode ?? null,
+    missingActions: data.missingActions ?? [],
+    lastError: data.lastError ?? data.message ?? null,
+    stopSemantics: data.stopSemantics ?? null,
+    realInterruptVerified: data.realInterruptVerified ?? null
+  };
+}
+
 function connectMocks() {
   state.devices = {
-    bci: "模拟 BCI 已连接",
-    robot: "模拟 TonyPi 可用",
+    bci: "演示 BCI 已连接",
+    robot: "演示 TonyPi 可用",
     camera: "marker 检测可用",
-    report: "mock 报告服务可用"
+    report: "演示报告服务可用"
   };
   const health = robotEventByCase("health_check_ap_ok");
   state.robotState = health?.data?.bridgeState ?? "idle";
   addEvent("bci_connected", { deviceId: "bci_sim_001", source: "simulated" });
-  addEvent("robot_connected", { bridgeMode: "mock", cameraReady: true });
+  addEvent("robot_connected", {
+    bridgeMode: "mock",
+    cameraReady: true,
+    robotEvent: robotEventPayload(robotCommandByCase("health_check_ap_ok"), health)
+  });
   state.page = "devices";
   render();
 }
@@ -212,11 +266,15 @@ function startTraining() {
   state.phase = "规则说明";
   state.startedAt = now();
   state.events = [];
+  state.samples = [];
+  state.bciSummary = emptyBciSummary();
   state.reportRequest = null;
   state.reportResponse = null;
   state.violations = 0;
   state.bciConfidence = "正常";
+  state.bciDisconnected = false;
   state.robotIssue = "";
+  state.robotEvents = [];
   addEvent("session_started", { mode: "mock" });
   addEvent("level_started", {
     levelId: state.manifest.id,
@@ -268,18 +326,19 @@ function nextTrainingPhase() {
   render();
 }
 
-function addRobotFeedback(caseName) {
+function addRobotFeedback(caseName, eventCase = null) {
   const command = robotCommandByCase(caseName);
-  const eventCase = caseName === "nogo_stop_busy" ? "nogo_stop_busy" : "go_invite_finished_ok";
-  const robotEvent = robotEventByCase(eventCase);
+  const resolvedEventCase =
+    eventCase ??
+    (caseName === "nogo_stop_busy" ? "nogo_stop_busy" : `${caseName.replace("_ok", "")}_finished_ok`);
+  const robotEvent = robotEventByCase(resolvedEventCase);
   state.robotState = robotEvent?.status === "busy" ? "busy" : robotEvent?.data?.bridgeState ?? "idle";
   if (command?.name) {
-    addEvent("robot_command_mocked", {
-      commandName: command.name,
-      commandType: command.type,
-      robotStatus: robotEvent?.status ?? "ok"
-    });
+    const payload = robotEventPayload(command, robotEvent);
+    state.robotEvents.push(payload);
+    addEvent(robotEvent?.status === "failed" ? "error_occurred" : "robot_event_received", payload);
   }
+  return robotEvent;
 }
 
 function requestScan() {
@@ -289,7 +348,29 @@ function requestScan() {
     scanCount: state.scanCount,
     centerZone: state.manifest.rules.centerZone
   });
-  addRobotFeedback("go_invite_ok");
+  addRobotFeedback("scan_crystal_ok", "scan_crystal_finished_ok");
+  render();
+}
+
+function simulateRobotScanFailure() {
+  if (state.page !== "training") return;
+  const robotEvent = addRobotFeedback(
+    "scan_crystal_failed_missing_action_file",
+    "scan_crystal_failed_missing_action_file"
+  );
+  state.robotState = robotEvent?.status ?? "failed";
+  state.robotIssue = "TonyPi 扫描动作暂时不可用";
+  state.degraded = true;
+  state.degradationReason = "TonyPi 扫描动作不可用，已切换为人工扫描覆盖。";
+  addEvent("operator_override_enabled", {
+    overrideType: "operator_scan_override",
+    reason: "robot_action_failed"
+  });
+  addEvent("degraded_mode_entered", {
+    reason: "robot_action_failed",
+    mode: "operator_scan_override",
+    message: state.degradationReason
+  });
   render();
 }
 
@@ -314,7 +395,15 @@ function recordScanSuccess() {
     markerId: state.manifest.rules.targetMarkerId,
     scanHoldSec: state.manifest.rules.timing.scanHoldSec
   });
-  updateBciSummary(state.bciConfidence === "低可信" ? "low_signal" : "stable");
+  if (state.bciDisconnected) {
+    addEvent("bci_disconnected", {
+      deviceId: "bci_sim_001",
+      source: "simulated",
+      reason: "simulated_disconnect"
+    });
+  } else {
+    updateBciSummary(state.bciConfidence === "低可信" ? "low_signal" : "stable");
+  }
   if (state.scanCount >= state.manifest.rules.totalScans) {
     completeTraining();
   } else {
@@ -367,9 +456,20 @@ function simulateLowBciSignal() {
   render();
 }
 
+function simulateBciDisconnected() {
+  if (state.page !== "training") return;
+  state.bciConfidence = "中断";
+  state.bciDisconnected = true;
+  updateBciSummary("disconnected", { fixtureEvents: true });
+  state.devices.bci = "演示 BCI 已断开";
+  state.degraded = true;
+  state.degradationReason = "BCI 已断开，训练可继续，但报告只保留部分注意力记录。";
+  render();
+}
+
 function simulateRobotUnavailable() {
   if (state.page !== "training") return;
-  const robotEvent = robotEventByCase("rest_unavailable_bridge_down");
+  const robotEvent = addRobotFeedback("rest_unavailable_bridge_down", "rest_unavailable_bridge_down");
   state.robotState = robotEvent?.status ?? "unavailable";
   state.robotIssue = "TonyPi 暂时不可用";
   state.degraded = true;
@@ -397,6 +497,7 @@ function simulateRobotUnavailable() {
 }
 
 function completeTraining() {
+  addRobotFeedback("stop_requested", "stop_ack_ok");
   const completed = state.scanCount >= state.manifest.rules.totalScans;
   state.phase = "完成";
   state.endedAt = now();
@@ -418,7 +519,7 @@ function completeTraining() {
     reason: state.finishReason
   });
   addEvent("bci_summary_ready", state.bciSummary);
-  addEvent("session_completed", { completedLevels: 1 });
+  addEvent("session_completed", { completedLevels: completed ? 1 : 0 });
   buildReport();
   state.page = "complete";
   render();
@@ -436,11 +537,13 @@ function buildReport() {
       bci: {
         deviceId: "bci_sim_001",
         source: "simulated",
-        lowSignalSeconds: state.bciSummary.lowSignalSeconds
+        lowSignalSeconds: state.bciSummary.lowSignalSeconds,
+        disconnected: state.bciDisconnected
       },
       robot: {
         bridgeMode: "mock",
-        degraded: state.degraded
+        degraded: state.degraded,
+        lastEvents: state.robotEvents.slice(-6)
       }
     }
   };
@@ -465,30 +568,43 @@ function buildReport() {
       ...(state.degraded
         ? [{ code: "DEGRADED_MODE", message: "本次演示启用了人工扫描覆盖。" }]
         : []),
-      ...(state.bciConfidence === "低可信"
-        ? [{ code: "LOW_BCI_CONFIDENCE", message: "本次 BCI 信号偏低，注意力记录可信度降低。" }]
+      ...(state.bciConfidence === "低可信" || state.bciDisconnected
+        ? [{ code: "LOW_BCI_CONFIDENCE", message: "本次 BCI 信号偏低或中断，注意力记录可信度降低。" }]
         : []),
       ...(state.robotIssue
         ? [{ code: "ROBOT_MOCK_DEGRADED", message: `${state.robotIssue}，训练使用降级路径完成。` }]
         : [])
     ]
   };
-  state.reportResponse.summary =
+  const summaryPrefix =
     state.finishReason === "completed"
-      ? state.fixtures.reportResponse.summary
+      ? `本次训练已完成。孩子完成了 ${state.scanCount} / ${state.manifest.rules.totalScans} 次晶石扫描。`
       : `本次训练提前结束。孩子完成了 ${state.scanCount} / ${state.manifest.rules.totalScans} 次晶石扫描，记录已保留，但不应视为完整训练。`;
-  state.reportResponse.highlights =
-    state.finishReason === "completed"
-      ? state.fixtures.reportResponse.highlights
-      : [
-          `完成 ${state.scanCount} / ${state.manifest.rules.totalScans} 次扫描。`,
-          "本次为提前结束记录，报告仅用于回顾过程。",
-          `训练中出现 ${state.violations} 次 No-Go 提前反应。`
-        ];
+  const confidenceText =
+    state.bciConfidence === "低可信" || state.bciDisconnected
+      ? "BCI 信号偏低或中断，注意力摘要仅作低可信参考。"
+      : "BCI 注意力摘要来自本次训练 session。";
+  state.reportResponse.summary = `${summaryPrefix}${confidenceText}`;
+  state.reportResponse.highlights = [
+    `完成 ${state.scanCount} / ${state.manifest.rules.totalScans} 次扫描。`,
+    `BCI 有效采样率为 ${Math.round(state.bciSummary.validSampleRate * 100)}%。`,
+    `训练中出现 ${state.violations} 次 No-Go 提前反应。`
+  ];
+  if (state.bciConfidence === "低可信" || state.bciDisconnected) {
+    state.reportResponse.sections = state.reportResponse.sections.map((section) =>
+      section.id === "attention"
+        ? {
+            ...section,
+            body: "本次注意力记录受到低信号或断连影响，仅用于回顾训练过程，不作为稳定表现判断。"
+          }
+        : section
+    );
+  }
   addEvent("report_ready", {
     reportId: state.reportResponse.reportId,
     status: "ready",
-    outcome: state.finishReason
+    outcome: state.finishReason,
+    bciConfidence: state.bciConfidence
   });
   persistSession();
 }
@@ -513,7 +629,11 @@ function resetDemo() {
   state.reportRequest = null;
   state.reportResponse = null;
   state.finishReason = "";
-  updateBciSummary("stable");
+  state.bciConfidence = "正常";
+  state.bciDisconnected = false;
+  state.robotIssue = "";
+  state.robotEvents = [];
+  state.bciSummary = emptyBciSummary();
   render();
 }
 
@@ -596,7 +716,7 @@ function renderDevices() {
       <section class="hero">
         <span class="eyebrow">开始前检查</span>
         <h1>设备连接</h1>
-        <p>演示模式会使用模拟设备；真实硬件将在后续阶段接入。</p>
+        <p>服务人员可使用演示设备跑通训练流程；家长只需确认状态可用。</p>
       </section>
       <section class="mobile-section">
         <div class="panel">
@@ -607,7 +727,7 @@ function renderDevices() {
         </div>
         <div class="panel stack">
           <button class="secondary" data-action="connect">重新检查设备</button>
-          <button class="secondary" data-action="degrade">模拟摄像头不可用</button>
+          <button class="secondary" data-action="degrade">演示视觉不可用</button>
           <button class="primary" data-action="start" ${ready ? "" : "disabled"}>开始训练</button>
           ${state.degraded ? `<p class="warning">${state.degradationReason}</p>` : ""}
         </div>
@@ -637,8 +757,8 @@ function renderTraining() {
       </section>
       <section class="mobile-section">
         <div class="panel stack">
-          <h2>交互运行时</h2>
-          <p class="label">训练不会自动通关；请按 TonyPi mock 信号或演示需要记录扫描、等待和降级。</p>
+          <h2>家长监看</h2>
+          <p class="label">手机只记录进度和状态；孩子的训练主体验仍在 TonyPi 旁完成。</p>
           <div class="split">
             <div class="metric"><span class="label">扫描进度</span><b>${state.scanCount} / ${total}</b></div>
             <div class="metric"><span class="label">生命值</span><b>${state.lives} / ${state.manifest.rules.initialLives}</b></div>
@@ -650,18 +770,25 @@ function renderTraining() {
             <div class="metric"><span class="label">TonyPi</span><b>${robotStateText(state.robotState)}</b></div>
           </div>
           ${state.degraded ? `<p class="warning">${state.degradationReason}</p>` : ""}
-          <div class="split">
-            <button class="secondary" data-action="next-phase">TonyPi 切换提示</button>
-            <button class="danger" data-action="finish">结束训练</button>
-          </div>
-          <div class="split">
-            <button class="primary" data-action="scan-success">收到扫描成功</button>
-            <button class="secondary" data-action="nogo-violation">提前动了</button>
-          </div>
-          <div class="split">
-            <button class="secondary" data-action="bci-low">BCI 低信号</button>
-            <button class="secondary" data-action="robot-down">TonyPi 不可用</button>
-          </div>
+          <details class="service-controls">
+            <summary>服务人员演示控制</summary>
+            <div class="split">
+              <button class="secondary" data-action="next-phase">切换阶段</button>
+              <button class="danger" data-action="finish">结束训练</button>
+            </div>
+            <div class="split">
+              <button class="primary" data-action="scan-success">记录扫描完成</button>
+              <button class="secondary" data-action="nogo-violation">记录提前行动</button>
+            </div>
+            <div class="split">
+              <button class="secondary" data-action="bci-low">BCI 低信号</button>
+              <button class="secondary" data-action="bci-disconnect">BCI 断开</button>
+            </div>
+            <div class="split">
+              <button class="secondary" data-action="robot-scan-fail">扫描动作失败</button>
+              <button class="secondary" data-action="robot-down">TonyPi 不可用</button>
+            </div>
+          </details>
         </div>
         <div class="panel stack">
           <h2>训练动态</h2>
@@ -679,7 +806,7 @@ function renderComplete() {
       <section class="hero">
         <span class="eyebrow">${completed ? "已完成" : "提前结束"}</span>
         <h1>${completed ? "训练完成" : "训练未完成"}</h1>
-        <p>${completed ? "已生成本次训练摘要，报告会标注模拟或降级数据。" : "本次训练提前结束，记录会保留，但不会标记为成功完成。"}</p>
+        <p>${completed ? "已生成本次训练摘要，报告会标注演示或降级数据。" : "本次训练提前结束，记录会保留，但不会标记为成功完成。"}</p>
       </section>
       <section class="mobile-section">
         <div class="panel stack">
@@ -728,7 +855,7 @@ function renderReport() {
             </article>
           `).join("")}
           ${report.warnings.map((warning) => `<p class="warning">${warning.message}</p>`).join("")}
-          <button class="secondary" data-action="reset">重新开始演示</button>
+          <button class="secondary" data-action="reset">重新开始</button>
         </div>
       </section>
     </main>
@@ -788,6 +915,15 @@ function activityText(event) {
     nogo_violation: "孩子在等待阶段提前行动，生命值减少。",
     bci_attention_window_updated: `注意力记录已更新，当前均值 ${payload.attentionAvg ?? state.bciSummary.attentionAvg}。`,
     bci_signal_quality_changed: "BCI 信号偏低，报告会降低可信度。",
+    bci_disconnected: "BCI 已断开，报告会标记为部分记录。",
+    robot_event_received:
+      payload.commandName === "stop"
+        ? "已记录 TonyPi 停止请求。"
+        : `TonyPi 已处理 ${payload.commandName ?? "训练"} 指令。`,
+    error_occurred:
+      payload.commandName === "scan_crystal"
+        ? "TonyPi 扫描动作不可用，已记录降级。"
+        : "训练设备出现异常，已记录处理。",
     robot_unavailable: "TonyPi 暂时不可用，已切换降级路径。",
     session_ended_early: "训练提前结束，已保留未完成记录。",
     camera_unavailable: "视觉识别不可用。",
@@ -831,6 +967,8 @@ function bindActions() {
       if (action === "scan-success") recordScanSuccess();
       if (action === "nogo-violation") recordNogoViolation();
       if (action === "bci-low") simulateLowBciSignal();
+      if (action === "bci-disconnect") simulateBciDisconnected();
+      if (action === "robot-scan-fail") simulateRobotScanFailure();
       if (action === "robot-down") simulateRobotUnavailable();
       if (action === "install") installPwa();
       if (action === "finish") completeTraining();
