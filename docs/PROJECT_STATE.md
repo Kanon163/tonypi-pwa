@@ -25,7 +25,9 @@ Wave 4 已启动：目标是用最小真实硬件路径替换 mock，先证明 T
 - GitHub 仓库：`https://github.com/Kanon163/tonypi-pwa`
 - PWA Pages 预览目标：`https://kanon163.github.io/tonypi-pwa/workspaces/app-pwa/`
 - Wave 3 专项审查修复已通过 PR `#11` 合并到 `main`，解除进入 Wave 4 的 app-pwa 阻塞。
-- Wave 4 采用小步探针：TonyPi bridge `#12`、BCI Web Bluetooth `#13`、PWA live adapter `#14`、集成门禁 `#15`。
+- Wave 4 TonyPi bridge 探针 `#12` 已通过 PR `#17` 合并到 `main`。
+- Wave 4 BCI Web Bluetooth 探针 `#13` 已通过 PR `#16` 合并到 `main`。
+- PWA live adapter `#14` 已解除启动门禁：只能基于已确认字段做 adapter 抽象、配置入口和 unavailable 降级。
 - 第二关默认节奏采用 `wave2_demo_default`。
 - Go/No-Go 扫描计数字段统一为 `scanCount`。
 - `camera_unavailable`、`operator_override_enabled`、`report_ready` 已进入契约。
@@ -35,11 +37,9 @@ Wave 4 已启动：目标是用最小真实硬件路径替换 mock，先证明 T
 - GitHub Pages 已部署成功，桌面复测根路径、PWA 路径、manifest、关卡 JSON 均为 200。
 - 安卓手机真实访问已通过用户验收。
 - Robot mock、BCI/report 与 UX 审查修复已合并。
-- 真实硬件接入、Web Bluetooth、TonyPi stop 真实语义是 Wave 4 当前验证重点。
+- 真实 TonyPi 动作执行、真实 BCI payload 解析、TonyPi stop 硬中断语义仍待实机验证。
 
 ## 下一步
 
-1. `robot-bridge` 执行 `#12` / `0019`：TonyPi bridge 真实探针。
-2. `bci-cloud` 执行 `#13` / `0020`：BCI Web Bluetooth 探针。
-3. `app-pwa` 等 `#12`、`#13` 初版交接后执行 `#14` / `0021`。
-4. `integration-review` 最后执行 `#15` / `0022`，给出 Wave 4 go/no-go。
+1. `app-pwa` 执行 `#14` / `0021`：PWA live adapter 接口替换。
+2. `integration-review` 最后执行 `#15` / `0022`，给出 Wave 4 go/no-go。
