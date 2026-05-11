@@ -45,6 +45,18 @@ button:disabled {
   opacity: 0.45;
 }
 
+input {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+}
+
 h1,
 h2,
 h3,
@@ -317,23 +329,27 @@ p {
 }
 
 .split,
+.mode-toggle,
 .quick-stats,
 .metrics {
   display: grid;
   gap: 8px;
 }
 
-.split {
+.split,
+.mode-toggle {
   grid-template-columns: 1fr 1fr;
 }
 
-.service-controls {
+.service-controls,
+.live-config {
   display: grid;
   gap: 8px;
   padding-top: 4px;
 }
 
-.service-controls summary {
+.service-controls summary,
+.live-config summary {
   min-height: 44px;
   padding: 12px;
   border: 1px solid var(--line);
@@ -344,11 +360,13 @@ p {
   font-weight: 800;
 }
 
-.service-controls[open] {
+.service-controls[open],
+.live-config[open] {
   gap: 8px;
 }
 
-.service-controls[open] summary {
+.service-controls[open] summary,
+.live-config[open] summary {
   margin-bottom: 8px;
 }
 

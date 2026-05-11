@@ -1,4 +1,4 @@
-const CACHE_NAME = "tonypi-pwa-mock-v4";
+const CACHE_NAME = "tonypi-pwa-mock-v5";
 const APP_ASSETS = [
   "./",
   "./index.html",
