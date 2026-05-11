@@ -2,7 +2,7 @@
 
 ## 当前波次
 
-Wave 3 app-pwa 已完成安卓 PWA 访问链路，并合入可交互 Go/No-Go mock 运行时。
+Wave 3 app-pwa 已完成安卓 PWA 访问链路、可交互 Go/No-Go mock 运行时和审查修复。
 
 项目已切换到 GitHub-centered workflow：Issue 管任务、PR 管交付、GitHub Pages 管手机预览。
 
@@ -24,8 +24,8 @@ Wave 3 app-pwa 已完成安卓 PWA 访问链路，并合入可交互 Go/No-Go mo
 - 用户已验证可交互 Go/No-Go mock 训练路径可正常使用。
 - GitHub 仓库：`https://github.com/Kanon163/tonypi-pwa`
 - PWA Pages 预览目标：`https://kanon163.github.io/tonypi-pwa/workspaces/app-pwa/`
-- Wave 3 专项审查结论：UX 为 CONDITIONAL PASS，Robot mock 为 BLOCK，BCI/report 为 CONDITIONAL PASS。
-- 当前开放 Issue：`#10` Wave 3 app-pwa 审查修复。
+- Wave 3 专项审查修复已通过 PR `#11` 合并到 `main`，解除进入 Wave 4 的 app-pwa 阻塞。
+- 当前开放 Issue：暂无 Wave 3 app-pwa 阻塞项。
 - 第二关默认节奏采用 `wave2_demo_default`。
 - Go/No-Go 扫描计数字段统一为 `scanCount`。
 - `camera_unavailable`、`operator_override_enabled`、`report_ready` 已进入契约。
@@ -34,11 +34,10 @@ Wave 3 app-pwa 已完成安卓 PWA 访问链路，并合入可交互 Go/No-Go mo
 
 - GitHub Pages 已部署成功，桌面复测根路径、PWA 路径、manifest、关卡 JSON 均为 200。
 - 安卓手机真实访问已通过用户验收。
-- Robot mock 契约消费不足，阻塞进入 Wave 4。
-- BCI/report 与 UX 有必须修正项，但可并入同一个 app-pwa 修复任务。
+- Robot mock、BCI/report 与 UX 审查修复已合并。
 - 真实硬件接入、Web Bluetooth、TonyPi stop 真实语义进入后续波次。
 
 ## 下一步
 
-1. 让 `app-pwa` 执行 `0018`，修复专项审查问题。
-2. 主控复审 `0018`，若无 BLOCK，再进入 Wave 4 真实硬件替换。
+1. 进入 Wave 4：用最小真实硬件路径替换 mock。
+2. Wave 4 先做小步验证：真实 TonyPi bridge 连通、Web Bluetooth BCI 探针、PWA 适配层接口，不做大规模 UI 重设计。
