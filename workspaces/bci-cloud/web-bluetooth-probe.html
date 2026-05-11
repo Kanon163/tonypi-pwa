@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BCI Web Bluetooth 探针</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f6f7f9;
+        color: #17202a;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      section {
+        background: #ffffff;
+        border: 1px solid #dde2ea;
+        border-radius: 8px;
+        margin: 14px 0;
+        padding: 16px;
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 10px;
+      }
+
+      p {
+        line-height: 1.6;
+      }
+
+      label {
+        display: block;
+        font-weight: 650;
+        margin: 12px 0 6px;
+      }
+
+      input,
+      textarea,
+      button {
+        box-sizing: border-box;
+        font: inherit;
+        width: 100%;
+      }
+
+      input,
+      textarea {
+        border: 1px solid #b9c2cf;
+        border-radius: 6px;
+        padding: 10px;
+      }
+
+      textarea {
+        min-height: 84px;
+        resize: vertical;
+      }
+
+      button {
+        background: #1769aa;
+        border: 0;
+        border-radius: 6px;
+        color: #ffffff;
+        cursor: pointer;
+        font-weight: 700;
+        margin-top: 12px;
+        padding: 12px;
+      }
+
+      button.secondary {
+        background: #415466;
+      }
+
+      button:disabled {
+        background: #a8b2bd;
+        cursor: not-allowed;
+      }
+
+      pre {
+        background: #111827;
+        border-radius: 6px;
+        color: #d1e7ff;
+        overflow: auto;
+        padding: 12px;
+        white-space: pre-wrap;
+      }
+
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      @media (min-width: 720px) {
+        .grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      .status {
+        border-left: 4px solid #1769aa;
+        padding-left: 12px;
+      }
+
+      .warn {
+        border-left-color: #b7791f;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section>
+        <h1>BCI Web Bluetooth 探针</h1>
+        <p>
+          用于安卓 Chrome 真机验证 BCI 头环是否可通过 Web Bluetooth 发现、连接、读取服务/特征值和接收通知。
+          本页面只做适配层探针，不接云端，不进入 PWA 主界面。
+        </p>
+      </section>
+
+      <section class="status" id="supportStatus">正在检测浏览器能力...</section>
+
+      <section>
+        <h2>连接参数</h2>
+        <label for="namePrefix">设备名前缀过滤，可留空</label>
+        <input id="namePrefix" placeholder="例如 BCI、Mind、EEG" />
+
+        <label for="optionalServices">目标服务 UUID，每行一个；read/notify 必填</label>
+        <textarea id="optionalServices" placeholder="例如 0000180f-0000-1000-8000-00805f9b34fb。留空只能验证设备选择和 GATT 连接。"></textarea>
+
+        <button id="connectButton">选择并连接 BCI</button>
+        <button id="disconnectButton" class="secondary" disabled>断开连接</button>
+      </section>
+
+      <section class="grid">
+        <div>
+          <h2>设备与服务</h2>
+          <pre id="deviceOutput">尚未连接。</pre>
+        </div>
+        <div>
+          <h2>BciSample 映射</h2>
+          <pre id="sampleOutput">尚未收到可映射数据。</pre>
+        </div>
+      </section>
+
+      <section>
+        <h2>事件日志</h2>
+        <pre id="logOutput"></pre>
+      </section>
+    </main>
+
+    <script src="./web-bluetooth-probe.js"></script>
+  </body>
+</html>
