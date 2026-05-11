@@ -20,31 +20,46 @@ CONDITIONAL PASS
 - `stop`：记录可发现的 AGC stop 方法；加 `--execute-action` 才调用。
 - `stop-during-scan`：高风险验证项，只在空旷安全场地加 `--execute-action` 执行。
 
-## TonyPi 执行步骤
+## TonyPi 执行步骤（MobaXterm）
 
 ### 1. 连接 TonyPi
 
+官方 TonyPi Pro 文档说明机器人可通过 AP 直连或 LAN 模式访问树莓派。你的电脑使用 MobaXterm 时，按下面方式建立 SSH session。
+
 AP 模式：
 
-```bash
-ssh pi@192.168.149.1
-```
+- 电脑先连接 TonyPi 的 `HW*` Wi-Fi 热点。
+- MobaXterm 新建 `Session -> SSH`。
+- `Remote host`: `192.168.149.1`
+- `Specify username`: `pi`
+- 密码按 TonyPi 系统版本填写；Pi 5 常见为 `raspberrypi`。
 
 LAN 模式：
 
-```bash
-ssh pi@<TonyPi LAN IP>
-```
+- 电脑和 TonyPi 连接到同一局域网。
+- 在 MobaXterm 新建 `Session -> SSH`。
+- `Remote host`: WonderPi 或路由器中看到的 TonyPi IP。
+- `Specify username`: `pi`
 
 ### 2. 复制探针
 
-把仓库中的脚本复制到 TonyPi：
+MobaXterm 连上 TonyPi 后，左侧 SFTP 面板会显示 TonyPi 文件系统。
+
+操作：
+
+- 在左侧进入 `/home/pi/`。
+- 从电脑文件区上传 `workspaces/robot-bridge/tonypi_real_bridge_probe.py`。
+- 上传后 TonyPi 上应存在：`/home/pi/tonypi_real_bridge_probe.py`。
+
+命令行替代方式：
 
 ```bash
 scp workspaces/robot-bridge/tonypi_real_bridge_probe.py pi@192.168.149.1:/home/pi/tonypi_real_bridge_probe.py
 ```
 
 ### 3. 运行健康检查
+
+在 MobaXterm 的 TonyPi 终端中执行：
 
 ```bash
 python3 /home/pi/tonypi_real_bridge_probe.py --mode health --jsonl /home/pi/robot_probe_health.jsonl
@@ -96,6 +111,16 @@ python3 /home/pi/tonypi_real_bridge_probe.py --mode stop-during-scan --execute-a
 - `data.realInterruptVerified=true`：观察到硬中断。
 - `stopSemantics=accepts_no_new_actions_only_or_not_observed`：未证明硬中断，只能作为“停止接收后续动作”处理。
 - `actionThreadStillRunning=true`：动作仍在执行，PWA 不得承诺急停能力。
+
+### 6. 取回结果
+
+MobaXterm 左侧 SFTP 面板中下载这些文件：
+
+- `/home/pi/robot_probe_health.jsonl`
+- `/home/pi/robot_probe_scan.jsonl`
+- `/home/pi/robot_probe_stop.jsonl`
+
+把文件内容交给 `integration-review` 或贴回 Issue/PR，即可判断真实 TonyPi 能力。
 
 ## 本地 dry run 结果
 
