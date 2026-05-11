@@ -42,6 +42,22 @@ ipconfig
 16. 进入训练完成页后点击“查看报告摘要”。
 17. 确认报告标注演示或降级数据。
 
+### live adapter 入口验证
+
+1. 打开 `http://127.0.0.1:8787/workspaces/app-pwa/?v=0021`。
+2. 在准备页选择“真实设备入口”。
+3. 不填写 `RobotBridge endpoint` 和 `BCI service UUID`，点击“进入设备连接”。
+4. 确认页面显示 BCI / TonyPi 不可用，并生成降级提示。
+5. 点击“切回演示设备”，确认 mock demo 仍可继续完整训练。
+6. 若已有 RobotBridge HTTP endpoint，可填写 endpoint 后重试。
+7. 若已有 BCI service UUID，可在安卓 Chrome HTTPS 或 localhost 环境填写后重试。
+
+当前 live 入口只做 adapter seam：
+
+- RobotBridge 预留 `GET /health` 与 `POST /commands`。
+- BCI 只在填写 service UUID 后触发 Web Bluetooth 设备选择。
+- 未知协议不解析，不展示 BCI raw。
+
 ### PWA 安装验证
 
 - `http://<电脑IP>:8787` 可验证手机访问和训练闭环，但 Android Chrome 通常不会在普通局域网 HTTP 下允许安装 PWA。
@@ -66,7 +82,7 @@ ngrok http 8787
 
 ## 边界
 
-- 不接真实 BCI。
-- 不接真实 TonyPi。
+- 不直接调用 TonyPi Python SDK。
+- 不解析未知 BCI raw 协议。
 - 不接真实云端。
 - 不展示 BCI raw 字段。

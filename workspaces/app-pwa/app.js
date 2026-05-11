@@ -14,6 +14,15 @@ const state = {
   loaded: false,
   manifest: null,
   fixtures: {},
+  adapters: {
+    robot: null,
+    bci: null
+  },
+  adapterMode: "mock",
+  liveConfig: {
+    robotEndpoint: "",
+    bciServiceUuid: ""
+  },
   sessionId: `session_mock_${Date.now()}`,
   devices: {
     bci: "未连接",
@@ -47,6 +56,7 @@ const state = {
   bciDisconnected: false,
   robotIssue: "",
   robotEvents: [],
+  liveStatus: "",
   finishReason: ""
 };
 
@@ -77,6 +87,11 @@ function persistSession() {
     events: state.events,
     bciSummary: state.bciSummary,
     robotEvents: state.robotEvents,
+    adapterMode: state.adapterMode,
+    liveConfig: {
+      robotEndpoint: state.liveConfig.robotEndpoint,
+      bciServiceUuid: state.liveConfig.bciServiceUuid ? "configured" : ""
+    },
     reportRequest: state.reportRequest,
     reportResponse: state.reportResponse
   };
@@ -164,6 +179,11 @@ function updateBciSummary(scenarioId = "stable", options = {}) {
   if (options.fixtureEvents) appendFixtureEvents(scenario);
 }
 
+function recordBciScenario(scenarioId, options = {}) {
+  configureAdapters();
+  state.adapters.bci.readScenario(scenarioId, options);
+}
+
 function robotEventByCase(caseName) {
   return state.fixtures.robotEvents.events.find((item) => item.case === caseName)?.event;
 }
@@ -193,23 +213,263 @@ function robotEventPayload(command, robotEvent) {
   };
 }
 
-function connectMocks() {
+function normalizeRobotEvent(event, fallback = {}) {
+  const data = event?.data ?? {};
+  return {
+    id: event?.id ?? `evt_live_${Date.now()}`,
+    type: event?.type ?? fallback.type ?? "error",
+    commandId: event?.commandId ?? fallback.commandId ?? null,
+    status: event?.status ?? fallback.status ?? "unavailable",
+    data: {
+      networkMode: data.networkMode ?? fallback.networkMode ?? "unknown",
+      bridgeState: data.bridgeState ?? fallback.bridgeState ?? "unavailable",
+      robotIp: data.robotIp ?? fallback.robotIp ?? null,
+      cameraReady: data.cameraReady ?? fallback.cameraReady ?? false,
+      missingActions: Array.isArray(data.missingActions) ? data.missingActions : fallback.missingActions ?? [],
+      lastError: data.lastError ?? data.message ?? fallback.lastError ?? null,
+      stopSemantics: data.stopSemantics ?? fallback.stopSemantics ?? null,
+      realInterruptVerified: data.realInterruptVerified ?? fallback.realInterruptVerified ?? false,
+      mock: data.mock ?? false
+    },
+    timestamp: event?.timestamp ?? now()
+  };
+}
+
+function createMockRobotAdapter() {
+  return {
+    mode: "mock",
+    async health() {
+      return robotEventByCase("health_check_ap_ok");
+    },
+    async sendCommand(caseName, eventCase = null) {
+      const command = robotCommandByCase(caseName);
+      const resolvedEventCase =
+        eventCase ??
+        (caseName === "nogo_stop_busy" ? "nogo_stop_busy" : `${caseName.replace("_ok", "")}_finished_ok`);
+      return { command, robotEvent: robotEventByCase(resolvedEventCase) };
+    }
+  };
+}
+
+function createLiveRobotAdapter(config) {
+  const endpoint = config.robotEndpoint.trim().replace(/\/$/, "");
+  return {
+    mode: "live",
+    async health() {
+      if (!endpoint) throw new Error("未配置 RobotBridge endpoint");
+      const response = await fetch(`${endpoint}/health`, { cache: "no-cache" });
+      if (!response.ok) throw new Error(`RobotBridge health 返回 ${response.status}`);
+      return normalizeRobotEvent(await response.json(), { type: "health_report" });
+    },
+    async sendCommand(caseName) {
+      if (!endpoint) throw new Error("未配置 RobotBridge endpoint");
+      const command = {
+        ...robotCommandByCase(caseName),
+        id: `cmd_live_${Date.now()}`,
+        sessionId: state.sessionId,
+        timestamp: now()
+      };
+      const response = await fetch(`${endpoint}/commands`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(command)
+      });
+      if (!response.ok) throw new Error(`RobotBridge command 返回 ${response.status}`);
+      return { command, robotEvent: normalizeRobotEvent(await response.json(), { commandId: command.id }) };
+    }
+  };
+}
+
+function createMockBciAdapter() {
+  return {
+    mode: "mock",
+    async connect() {
+      return {
+        deviceId: "bci_sim_001",
+        source: "simulated"
+      };
+    },
+    readScenario(scenarioId, options) {
+      updateBciSummary(scenarioId, options);
+    }
+  };
+}
+
+function createLiveBciAdapter(config) {
+  return {
+    mode: "live",
+    async connect() {
+      const serviceUuid = config.bciServiceUuid.trim();
+      if (!window.isSecureContext) throw new Error("Web Bluetooth 需要 HTTPS 或 localhost");
+      if (!navigator.bluetooth) throw new Error("当前浏览器不支持 Web Bluetooth");
+      if (!serviceUuid) throw new Error("未配置 BCI service UUID");
+      const device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: [serviceUuid]
+      });
+      device.addEventListener("gattserverdisconnected", () => {
+        state.bciDisconnected = true;
+        state.degraded = true;
+        state.degradationReason = "BCI 已断开，训练可继续，但报告只保留部分注意力记录。";
+        addEvent("bci_disconnected", {
+          deviceId: device.id,
+          source: "device",
+          reason: "gattserverdisconnected"
+        });
+        render();
+      });
+      const server = await device.gatt.connect();
+      state.samples.push({
+        deviceId: device.id,
+        source: "device",
+        attention: null,
+        relaxation: null,
+        signalQuality: null,
+        bandPower: {},
+        timestamp: now()
+      });
+      state.bciSummary = {
+        ...emptyBciSummary(),
+        sampleCount: state.samples.length,
+        source: "device"
+      };
+      return {
+        deviceId: device.id,
+        source: "device",
+        connected: server.connected,
+        serviceUuid
+      };
+    },
+    readScenario(scenarioId, options) {
+      if (this.mode === "live") return;
+      updateBciSummary(scenarioId, options);
+    }
+  };
+}
+
+function configureAdapters() {
+  state.adapters.robot =
+    state.adapterMode === "live" ? createLiveRobotAdapter(state.liveConfig) : createMockRobotAdapter();
+  state.adapters.bci = state.adapterMode === "live" ? createLiveBciAdapter(state.liveConfig) : createMockBciAdapter();
+}
+
+function markRobotUnavailable(reason, message) {
+  state.robotState = "unavailable";
+  state.robotIssue = "TonyPi 暂时不可用";
+  state.degraded = true;
+  state.degradationReason = message;
+  state.devices.robot = "不可用";
+  state.devices.camera = "人工扫描覆盖";
+  addEvent("robot_unavailable", {
+    bridgeMode: state.adapterMode,
+    reason
+  });
+  addEvent("camera_unavailable", {
+    reason,
+    mode: "operator_scan_override"
+  });
+  addEvent("operator_override_enabled", {
+    overrideType: "operator_scan_override",
+    reason
+  });
+  addEvent("degraded_mode_entered", {
+    reason,
+    mode: "operator_scan_override",
+    message
+  });
+}
+
+function markBciDisconnected(reason, message) {
+  state.bciConfidence = "中断";
+  state.bciDisconnected = true;
+  state.degraded = true;
+  state.degradationReason = message;
+  state.devices.bci = state.adapterMode === "live" ? "真实 BCI 不可用" : "演示 BCI 已断开";
+  addEvent("bci_disconnected", {
+    deviceId: state.adapterMode === "live" ? "live_bci_pending" : "bci_sim_001",
+    source: state.adapterMode === "live" ? "device" : "simulated",
+    reason
+  });
+  addEvent("degraded_mode_entered", {
+    reason,
+    message
+  });
+}
+
+async function connectDevices() {
+  configureAdapters();
+  state.liveStatus = "";
+  state.degraded = false;
+  state.degradationReason = "";
+  state.robotIssue = "";
+  state.bciDisconnected = false;
   state.devices = {
-    bci: "演示 BCI 已连接",
-    robot: "演示 TonyPi 可用",
-    camera: "marker 检测可用",
+    bci: "连接中",
+    robot: "连接中",
+    camera: "待检测",
     report: "演示报告服务可用"
   };
-  const health = robotEventByCase("health_check_ap_ok");
-  state.robotState = health?.data?.bridgeState ?? "idle";
-  addEvent("bci_connected", { deviceId: "bci_sim_001", source: "simulated" });
-  addEvent("robot_connected", {
-    bridgeMode: "mock",
-    cameraReady: true,
-    robotEvent: robotEventPayload(robotCommandByCase("health_check_ap_ok"), health)
-  });
-  state.page = "devices";
   render();
+
+  let bciReady = false;
+  let robotReady = false;
+
+  try {
+    const bci = await state.adapters.bci.connect();
+    state.devices.bci = state.adapterMode === "live" ? "真实 BCI 已连接" : "演示 BCI 已连接";
+    addEvent("bci_connected", {
+      deviceId: bci.deviceId,
+      source: bci.source,
+      serviceUuid: state.adapterMode === "live" ? "configured" : null
+    });
+    bciReady = true;
+  } catch (error) {
+    markBciDisconnected("bci_live_unavailable", error.message);
+  }
+
+  try {
+    const health = await state.adapters.robot.health();
+    const payload = robotEventPayload(robotCommandByCase("health_check_ap_ok"), health);
+    state.robotState = health?.data?.bridgeState ?? "idle";
+    state.devices.robot = state.adapterMode === "live" ? "真实 TonyPi 桥已连接" : "演示 TonyPi 可用";
+    state.devices.camera = health?.data?.cameraReady === false ? "人工扫描覆盖" : "marker 检测可用";
+    addEvent("robot_connected", {
+      bridgeMode: state.adapterMode,
+      cameraReady: health?.data?.cameraReady !== false,
+      robotEvent: payload
+    });
+    state.robotEvents.push(payload);
+    if (payload.missingActions?.includes("scan_crystal")) {
+      markRobotUnavailable("scan_crystal_missing", "TonyPi 缺少扫描动作，已切换为人工扫描覆盖。");
+    } else {
+      robotReady = true;
+    }
+  } catch (error) {
+    markRobotUnavailable("robot_live_unavailable", error.message);
+  }
+
+  state.liveStatus =
+    state.adapterMode === "live"
+      ? "live 模式只验证连接入口；失败会保留降级事件，可切回演示设备继续训练。"
+      : "当前使用演示设备，Pages 可继续运行完整 mock demo。";
+  state.page = "devices";
+  if (!bciReady || !robotReady) {
+    state.degraded = true;
+  }
+  render();
+}
+
+function setAdapterMode(mode) {
+  state.adapterMode = mode;
+  state.liveStatus =
+    mode === "live"
+      ? "live 需要 RobotBridge endpoint 和 BCI service UUID；缺失时只生成 unavailable 降级。"
+      : "演示设备会保留完整 mock demo。";
+  render();
+}
+
+function updateLiveConfig(field, value) {
+  state.liveConfig[field] = value.trim();
 }
 
 function refreshPwaStatus() {
@@ -275,7 +535,7 @@ function startTraining() {
   state.bciDisconnected = false;
   state.robotIssue = "";
   state.robotEvents = [];
-  addEvent("session_started", { mode: "mock" });
+  addEvent("session_started", { mode: state.adapterMode });
   addEvent("level_started", {
     levelId: state.manifest.id,
     targetMarkerId: state.manifest.rules.targetMarkerId,
@@ -296,10 +556,10 @@ function startTraining() {
   render();
 }
 
-function nextTrainingPhase() {
+async function nextTrainingPhase() {
   if (state.page !== "training") return;
   if (state.scanCount >= state.manifest.rules.totalScans) {
-    completeTraining();
+    await completeTraining();
     return;
   }
   if (state.phase === "规则说明" || state.phase === "No-Go" || state.phase === "扫描") {
@@ -308,14 +568,14 @@ function nextTrainingPhase() {
       durationSec: state.manifest.rules.timing.goDurationSecRange[0],
       scanCount: state.scanCount
     });
-    addRobotFeedback("go_invite_ok");
+    await addRobotFeedback("go_invite_ok");
   } else {
     state.phase = "No-Go";
     addEvent("state_nogo", {
       durationSec: state.manifest.rules.timing.nogoDurationSecRange[0],
       lives: state.lives
     });
-    addRobotFeedback("nogo_stop_busy");
+    await addRobotFeedback("nogo_stop_busy");
   }
   addEvent("phase_changed", {
     phase: state.phase,
@@ -326,35 +586,44 @@ function nextTrainingPhase() {
   render();
 }
 
-function addRobotFeedback(caseName, eventCase = null) {
-  const command = robotCommandByCase(caseName);
-  const resolvedEventCase =
-    eventCase ??
-    (caseName === "nogo_stop_busy" ? "nogo_stop_busy" : `${caseName.replace("_ok", "")}_finished_ok`);
-  const robotEvent = robotEventByCase(resolvedEventCase);
-  state.robotState = robotEvent?.status === "busy" ? "busy" : robotEvent?.data?.bridgeState ?? "idle";
-  if (command?.name) {
-    const payload = robotEventPayload(command, robotEvent);
-    state.robotEvents.push(payload);
-    addEvent(robotEvent?.status === "failed" ? "error_occurred" : "robot_event_received", payload);
+async function addRobotFeedback(caseName, eventCase = null) {
+  configureAdapters();
+  try {
+    const { command, robotEvent } = await state.adapters.robot.sendCommand(caseName, eventCase);
+    state.robotState = robotEvent?.status === "busy" ? "busy" : robotEvent?.data?.bridgeState ?? "idle";
+    if (command?.name) {
+      const payload = robotEventPayload(command, robotEvent);
+      state.robotEvents.push(payload);
+      addEvent(robotEvent?.status === "failed" ? "error_occurred" : "robot_event_received", payload);
+      if (payload.missingActions?.includes("scan_crystal")) {
+        markRobotUnavailable("scan_crystal_missing", "TonyPi 缺少扫描动作，已切换为人工扫描覆盖。");
+      }
+    }
+    return robotEvent;
+  } catch (error) {
+    markRobotUnavailable("robot_live_command_failed", error.message);
+    return normalizeRobotEvent(null, {
+      status: "unavailable",
+      lastError: error.message,
+      bridgeState: "unavailable"
+    });
   }
-  return robotEvent;
 }
 
-function requestScan() {
+async function requestScan() {
   if (state.page !== "training") return;
   state.phase = "扫描";
   addEvent("scan_requested", {
     scanCount: state.scanCount,
     centerZone: state.manifest.rules.centerZone
   });
-  addRobotFeedback("scan_crystal_ok", "scan_crystal_finished_ok");
+  await addRobotFeedback("scan_crystal_ok", "scan_crystal_finished_ok");
   render();
 }
 
-function simulateRobotScanFailure() {
+async function simulateRobotScanFailure() {
   if (state.page !== "training") return;
-  const robotEvent = addRobotFeedback(
+  const robotEvent = await addRobotFeedback(
     "scan_crystal_failed_missing_action_file",
     "scan_crystal_failed_missing_action_file"
   );
@@ -374,10 +643,10 @@ function simulateRobotScanFailure() {
   render();
 }
 
-function recordScanSuccess() {
+async function recordScanSuccess() {
   if (state.page !== "training") return;
   if (state.phase === "No-Go") {
-    recordNogoViolation();
+    await recordNogoViolation();
     return;
   }
   if (state.phase !== "Go" && state.phase !== "扫描") {
@@ -387,7 +656,7 @@ function recordScanSuccess() {
       scanCount: state.scanCount
     });
   }
-  requestScan();
+  await requestScan();
   state.scanCount = Math.min(state.manifest.rules.totalScans, state.scanCount + 1);
   addEvent("scan_success", {
     scanCount: state.scanCount,
@@ -402,10 +671,10 @@ function recordScanSuccess() {
       reason: "simulated_disconnect"
     });
   } else {
-    updateBciSummary(state.bciConfidence === "低可信" ? "low_signal" : "stable");
+    recordBciScenario(state.bciConfidence === "低可信" ? "low_signal" : "stable");
   }
   if (state.scanCount >= state.manifest.rules.totalScans) {
-    completeTraining();
+    await completeTraining();
   } else {
     state.phase = "No-Go";
     addEvent("state_nogo", {
@@ -416,7 +685,7 @@ function recordScanSuccess() {
   render();
 }
 
-function recordNogoViolation() {
+async function recordNogoViolation() {
   if (state.page !== "training") return;
   state.violations += 1;
   state.lives = Math.max(0, state.lives - 1);
@@ -426,7 +695,7 @@ function recordNogoViolation() {
     markerInCenter: true,
     scanCount: state.scanCount
   });
-  addRobotFeedback("nogo_stop_busy");
+  await addRobotFeedback("nogo_stop_busy");
   if (state.lives <= 0) {
     state.degraded = true;
     state.degradationReason = "等待阶段连续提前行动，训练仍保留记录但需要家长协助。";
@@ -441,7 +710,7 @@ function recordNogoViolation() {
 function simulateLowBciSignal() {
   if (state.page !== "training") return;
   state.bciConfidence = "低可信";
-  updateBciSummary("low_signal");
+  recordBciScenario("low_signal");
   addEvent("bci_signal_quality_changed", {
     signalQualityAvg: state.bciSummary.signalQualityAvg,
     state: "low_signal",
@@ -460,16 +729,16 @@ function simulateBciDisconnected() {
   if (state.page !== "training") return;
   state.bciConfidence = "中断";
   state.bciDisconnected = true;
-  updateBciSummary("disconnected", { fixtureEvents: true });
-  state.devices.bci = "演示 BCI 已断开";
-  state.degraded = true;
-  state.degradationReason = "BCI 已断开，训练可继续，但报告只保留部分注意力记录。";
+  if (state.adapterMode === "mock") {
+    recordBciScenario("disconnected", { fixtureEvents: true });
+  }
+  markBciDisconnected("bci_manual_disconnect", "BCI 已断开，训练可继续，但报告只保留部分注意力记录。");
   render();
 }
 
-function simulateRobotUnavailable() {
+async function simulateRobotUnavailable() {
   if (state.page !== "training") return;
-  const robotEvent = addRobotFeedback("rest_unavailable_bridge_down", "rest_unavailable_bridge_down");
+  const robotEvent = await addRobotFeedback("rest_unavailable_bridge_down", "rest_unavailable_bridge_down");
   state.robotState = robotEvent?.status ?? "unavailable";
   state.robotIssue = "TonyPi 暂时不可用";
   state.degraded = true;
@@ -496,8 +765,8 @@ function simulateRobotUnavailable() {
   render();
 }
 
-function completeTraining() {
-  addRobotFeedback("stop_requested", "stop_ack_ok");
+async function completeTraining() {
+  await addRobotFeedback("stop_requested", "stop_ack_ok");
   const completed = state.scanCount >= state.manifest.rules.totalScans;
   state.phase = "完成";
   state.endedAt = now();
@@ -535,13 +804,13 @@ function buildReport() {
     bciSummary: state.bciSummary,
     deviceSummary: {
       bci: {
-        deviceId: "bci_sim_001",
-        source: "simulated",
+        deviceId: state.adapterMode === "live" ? "live_bci_pending" : "bci_sim_001",
+        source: state.adapterMode === "live" ? "device" : "simulated",
         lowSignalSeconds: state.bciSummary.lowSignalSeconds,
         disconnected: state.bciDisconnected
       },
       robot: {
-        bridgeMode: "mock",
+        bridgeMode: state.adapterMode,
         degraded: state.degraded,
         lastEvents: state.robotEvents.slice(-6)
       }
@@ -558,7 +827,7 @@ function buildReport() {
       validSampleRate: state.bciSummary.validSampleRate,
       lowSignalSeconds: state.bciSummary.lowSignalSeconds,
       nogoViolationCount: state.violations,
-      source: "simulated"
+      source: state.adapterMode === "live" ? "device" : "simulated"
     },
     warnings: [
       ...state.fixtures.reportResponse.warnings,
@@ -572,7 +841,7 @@ function buildReport() {
         ? [{ code: "LOW_BCI_CONFIDENCE", message: "本次 BCI 信号偏低或中断，注意力记录可信度降低。" }]
         : []),
       ...(state.robotIssue
-        ? [{ code: "ROBOT_MOCK_DEGRADED", message: `${state.robotIssue}，训练使用降级路径完成。` }]
+        ? [{ code: "ROBOT_DEGRADED", message: `${state.robotIssue}，训练使用降级路径完成。` }]
         : [])
     ]
   };
@@ -687,13 +956,30 @@ function renderPrepare() {
         <div class="panel stack">
           <h2>训练准备</h2>
           <p class="label">家长负责启动和监看；儿童主要与 TonyPi 互动。</p>
+          <div class="mode-toggle" role="group" aria-label="连接模式">
+            <button class="${state.adapterMode === "mock" ? "primary" : "secondary"}" data-action="mode-mock">演示设备</button>
+            <button class="${state.adapterMode === "live" ? "primary" : "secondary"}" data-action="mode-live">真实设备入口</button>
+          </div>
           <div class="quick-stats">
             <div class="metric"><span class="label">目标扫描</span><b>${state.manifest.rules.totalScans}</b></div>
             <div class="metric"><span class="label">初始生命</span><b>${state.manifest.rules.initialLives}</b></div>
             <div class="metric"><span class="label">互动对象</span><b>TonyPi</b></div>
           </div>
           <button class="primary" data-action="connect">进入设备连接</button>
+          ${state.liveStatus ? `<p class="label">${state.liveStatus}</p>` : ""}
         </div>
+        <details class="panel stack live-config" ${state.adapterMode === "live" ? "open" : ""}>
+          <summary>真实设备配置</summary>
+          <label>
+            <span class="label">RobotBridge endpoint</span>
+            <input data-config="robotEndpoint" placeholder="例如 http://192.168.1.20:8788" value="${state.liveConfig.robotEndpoint}">
+          </label>
+          <label>
+            <span class="label">BCI service UUID</span>
+            <input data-config="bciServiceUuid" placeholder="由 BCI 探针确认后填写" value="${state.liveConfig.bciServiceUuid}">
+          </label>
+          <p class="label">未配置或不可用时，会生成降级事件；不会猜测真实协议。</p>
+        </details>
         <div class="panel stack">
           <h3>家长会看到什么</h3>
           <p>训练进度、设备状态、注意力摘要和结束后的报告提示。</p>
@@ -710,7 +996,11 @@ function renderPrepare() {
 }
 
 function renderDevices() {
-  const ready = state.devices.bci.includes("已连接") && state.devices.robot.includes("可用");
+  const ready =
+    state.devices.bci.includes("已连接") &&
+    (state.devices.robot.includes("可用") || state.devices.robot.includes("已连接"));
+  const robotTone = state.devices.robot.includes("不可用") ? "warn" : "ok";
+  const bciTone = state.devices.bci.includes("不可用") || state.devices.bci.includes("断开") ? "warn" : "ok";
   return `
     <main class="page">
       <section class="hero">
@@ -720,16 +1010,19 @@ function renderDevices() {
       </section>
       <section class="mobile-section">
         <div class="panel">
-          ${statusRow("BCI 头环", state.devices.bci, "ok")}
-          ${statusRow("TonyPi 桥", state.devices.robot, "ok")}
+          ${statusRow("连接模式", state.adapterMode === "live" ? "真实设备入口" : "演示设备", "ok")}
+          ${statusRow("BCI 头环", state.devices.bci, bciTone)}
+          ${statusRow("TonyPi 桥", state.devices.robot, robotTone)}
           ${statusRow("视觉识别", state.devices.camera, state.degraded ? "warn" : "ok")}
           ${statusRow("报告服务", state.devices.report, "ok")}
         </div>
         <div class="panel stack">
           <button class="secondary" data-action="connect">重新检查设备</button>
+          ${state.adapterMode === "live" ? `<button class="secondary" data-action="connect-mock">切回演示设备</button>` : ""}
           <button class="secondary" data-action="degrade">演示视觉不可用</button>
           <button class="primary" data-action="start" ${ready ? "" : "disabled"}>开始训练</button>
           ${state.degraded ? `<p class="warning">${state.degradationReason}</p>` : ""}
+          ${state.liveStatus ? `<p class="label">${state.liveStatus}</p>` : ""}
         </div>
       </section>
     </main>
@@ -958,25 +1251,36 @@ function renderParentActivity() {
 
 function bindActions() {
   document.querySelectorAll("[data-action]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       const action = button.dataset.action;
-      if (action === "connect") connectMocks();
+      if (action === "mode-mock") setAdapterMode("mock");
+      if (action === "mode-live") setAdapterMode("live");
+      if (action === "connect-mock") {
+        state.adapterMode = "mock";
+        await connectDevices();
+      }
+      if (action === "connect") await connectDevices();
       if (action === "degrade") enterDegradedMode();
       if (action === "start") startTraining();
-      if (action === "next-phase") nextTrainingPhase();
-      if (action === "scan-success") recordScanSuccess();
-      if (action === "nogo-violation") recordNogoViolation();
+      if (action === "next-phase") await nextTrainingPhase();
+      if (action === "scan-success") await recordScanSuccess();
+      if (action === "nogo-violation") await recordNogoViolation();
       if (action === "bci-low") simulateLowBciSignal();
       if (action === "bci-disconnect") simulateBciDisconnected();
-      if (action === "robot-scan-fail") simulateRobotScanFailure();
-      if (action === "robot-down") simulateRobotUnavailable();
+      if (action === "robot-scan-fail") await simulateRobotScanFailure();
+      if (action === "robot-down") await simulateRobotUnavailable();
       if (action === "install") installPwa();
-      if (action === "finish") completeTraining();
+      if (action === "finish") await completeTraining();
       if (action === "report") {
         state.page = "report";
         render();
       }
       if (action === "reset") resetDemo();
+    });
+  });
+  document.querySelectorAll("[data-config]").forEach((input) => {
+    input.addEventListener("input", () => {
+      updateLiveConfig(input.dataset.config, input.value);
     });
   });
 }

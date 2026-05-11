@@ -2,25 +2,24 @@
 
 ## 当前状态
 
-Issue #10 / 0018 已完成本地修复，等待 PR 审查。
+Issue #14 / 0021 已完成本地修复，准备 PR。
 
-## 本次修复
+## 本次产出
 
-- `scan_requested` 改为消费 `scan_crystal` RobotCommand/RobotEvent。
-- 增加可操作的 `scan_crystal failed`、`stop_ack_ok`、BCI 断连降级路径。
-- RobotEvent 关键字段写入训练事件与报告 `deviceSummary.robot.lastEvents`。
-- 训练开始清空本 session BCI 样本，报告只使用本轮摘要。
-- 低信号/断连时报告摘要、重点和 warning 保持一致。
-- 家长主界面改为监看优先，演示控制折叠到服务人员区。
-- Service Worker cache 更新到 `tonypi-pwa-mock-v4`，降低手机旧缓存风险。
+- 抽出 RobotBridge adapter：`mock` 消费 fixtures，`live` 预留 `GET /health`、`POST /commands`。
+- 抽出 BCI source adapter：`mock` 消费 fixtures，`live` 使用 Web Bluetooth service UUID 配置入口。
+- 准备页增加“演示设备 / 真实设备入口”模式选择。
+- live 未配置或不可用时生成 `robot_unavailable`、`bci_disconnected` 与降级提示。
+- mock 模式保持默认，Pages 仍可运行完整 demo。
+- Service Worker cache 更新到 `tonypi-pwa-mock-v5`。
 
 ## 验证
 
 - `node --check workspaces/app-pwa/app.js` 通过。
-- `shared/fixtures/robot-commands.json`、`shared/fixtures/robot-events.json` JSON 解析通过。
-- 本地静态访问 `http://127.0.0.1:8787/workspaces/app-pwa/` 返回 200。
-- 代码检查确认 `scan_crystal_ok`、`scan_crystal_failed_missing_action_file`、`stop_ack_ok`、`bci-disconnect` 均有运行入口。
+- 代码检查确认 live adapter、mode 选择、不可用降级与 cache v5 均存在。
+- 本地静态访问 `http://127.0.0.1:8787/workspaces/app-pwa/?v=0021` 返回 200。
+- `git diff --check` 通过。
 
 ## 下一步
 
-- 等待主控复审 Robot mock BLOCK 是否清除。
+- 开 PR 给 integration-review 复审。
