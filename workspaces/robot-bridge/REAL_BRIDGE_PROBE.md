@@ -108,8 +108,10 @@ python3 /home/pi/tonypi_real_bridge_probe.py --mode stop-during-scan --execute-a
 
 验收点：
 
-- `data.realInterruptVerified=true`：观察到硬中断。
+- `data.realInterruptVerified=true`：保留给后续更强实证；当前探针不会仅凭线程结束置为 true。
 - `stopSemantics=accepts_no_new_actions_only_or_not_observed`：未证明硬中断，只能作为“停止接收后续动作”处理。
+- `stopSemantics=action_completed_before_stop_call`：动作在 stop 调用前自然结束，不得视为硬中断。
+- `stopSemantics=stop_method_called_action_ended_after_stop_unverified`：stop 方法调用后动作结束，但仍不能排除自然结束；不得视为已验证急停。
 - `actionThreadStillRunning=true`：动作仍在执行，PWA 不得承诺急停能力。
 
 ### 6. 取回结果
@@ -155,6 +157,18 @@ MobaXterm 左侧 SFTP 面板中下载这些文件：
 - `data.cameraReady`
 - `data.missingActions`
 - `data.lastError`
+
+## PWA live adapter 边界
+
+- 当前没有可供 PWA 直接调用的 live RobotBridge endpoint。
+- 本 PR 交付的是 TonyPi 本机一次性探针，不是 HTTP/SSE 桥服务。
+- #14 若先启动 live Robot adapter，只能做接口抽象、endpoint 配置和 `unavailable` 降级。
+- 若预留下一步桥服务 endpoint，建议最小形状为：
+  - `GET /health -> RobotEvent`
+  - `POST /commands -> RobotEvent`
+  - 可选 `GET /events` 或 `SSE /events -> RobotEvent stream`
+- 上述 endpoint 是下一步桥服务契约建议，不是本 PR 已实测事实。
+- `stop` 在实机确认前只能按 `accepts_no_new_actions_only_or_not_observed` 或同等保守语义处理。
 
 ## 当前阻塞
 

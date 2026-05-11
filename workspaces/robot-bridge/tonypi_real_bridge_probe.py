@@ -422,10 +422,11 @@ def stop_during_scan_probe(command_id: str) -> dict[str, Any]:
     started = time.monotonic()
     thread.start()
     time.sleep(0.25)
+    completed_before_stop = not thread.is_alive()
     stop_called = None
     stop_error = None
 
-    if stop_methods:
+    if not completed_before_stop and stop_methods:
         stop_called = stop_methods[0]
         try:
             getattr(agc, stop_called)()
@@ -433,23 +434,37 @@ def stop_during_scan_probe(command_id: str) -> dict[str, Any]:
             stop_error = str(exc)
 
     thread.join(timeout=2.0)
-    interrupted = not thread.is_alive()
+    action_thread_still_running = thread.is_alive()
+    completed_after_stop_call = (
+        not completed_before_stop
+        and stop_called is not None
+        and not action_thread_still_running
+        and not stop_error
+    )
     duration_ms = round((time.monotonic() - started) * 1000)
+    if completed_before_stop:
+        stop_semantics = "action_completed_before_stop_call"
+    elif completed_after_stop_call:
+        stop_semantics = "stop_method_called_action_ended_after_stop_unverified"
+    else:
+        stop_semantics = "accepts_no_new_actions_only_or_not_observed"
 
     return robot_event(
         event_id="evt_probe_stop_during_scan_001",
-        event_type="command_finished" if interrupted and not stop_error else "error",
+        event_type="command_finished" if not action_thread_still_running and not stop_error else "error",
         command_id=command_id,
-        status="ok" if interrupted and not stop_error else "failed",
+        status="ok" if not action_thread_still_running and not stop_error else "failed",
         data={
-            "bridgeState": "idle" if interrupted else "stopping",
-            "stopSemantics": "hard_interrupt_observed" if stop_called and interrupted else "accepts_no_new_actions_only_or_not_observed",
-            "completedAction": action if interrupted else None,
+            "bridgeState": "idle" if not action_thread_still_running else "stopping",
+            "stopSemantics": stop_semantics,
+            "completedAction": action if not action_thread_still_running else None,
             "durationMs": duration_ms,
             "availableStopMethods": stop_methods,
             "calledMethod": stop_called,
-            "realInterruptVerified": bool(stop_called and interrupted and not stop_error),
-            "actionThreadStillRunning": thread.is_alive(),
+            "realInterruptVerified": False,
+            "completedBeforeStopCall": completed_before_stop,
+            "completedAfterStopCall": completed_after_stop_call,
+            "actionThreadStillRunning": action_thread_still_running,
             "lastError": stop_error or result["exception"],
             "realHardwareProbe": True,
         },
