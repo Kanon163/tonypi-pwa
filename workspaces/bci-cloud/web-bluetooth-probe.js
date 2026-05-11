@@ -3,7 +3,8 @@ const state = {
   server: null,
   notifications: [],
   discovered: [],
-  lastSample: null
+  lastSample: null,
+  serviceAccessNote: ""
 };
 
 const els = {
@@ -59,26 +60,66 @@ function buildRequestOptions() {
 }
 
 async function connect() {
+  const optionalServices = parseOptionalServices();
+  let device;
+  state.notifications = [];
+  state.discovered = [];
+  state.lastSample = null;
+  state.serviceAccessNote = "";
+  renderDeviceInfo();
   try {
     const options = buildRequestOptions();
     log("requestDevice", options);
-    const device = await navigator.bluetooth.requestDevice(options);
+    device = await navigator.bluetooth.requestDevice(options);
     state.device = device;
     device.addEventListener("gattserverdisconnected", handleDisconnected);
     log("device selected", { id: device.id, name: device.name || null });
+  } catch (error) {
+    log("device selection failed", { name: error.name, message: error.message });
+    return;
+  }
 
+  try {
     state.server = await device.gatt.connect();
     els.disconnectButton.disabled = false;
-    await discoverServices();
+    log("gatt connected", { id: device.id, name: device.name || null });
   } catch (error) {
-    log("connect failed", { name: error.name, message: error.message });
+    log("gatt connect failed", { name: error.name, message: error.message });
+    renderDeviceInfo();
+    return;
+  }
+
+  if (!optionalServices.length) {
+    state.serviceAccessNote =
+      "已选择并连接设备，但 optionalServices 为空。Web Bluetooth 不允许访问未声明的 GATT services；请输入目标 service UUID 后重试 read/notify。";
+    log("service discovery skipped", {
+      reason: "missing_optional_services",
+      nextStep: "Provide target service UUID from vendor docs or another BLE tool."
+    });
+    renderDeviceInfo();
+    return;
+  }
+
+  await discoverServices();
+}
+
+async function getAccessibleServices() {
+  try {
+    return await state.server.getPrimaryServices();
+  } catch (error) {
+    state.serviceAccessNote =
+      "设备已连接，但 GATT service 访问失败。常见原因是 service UUID 未在 filters.services 或 optionalServices 中声明。";
+    log("service access failed", { name: error.name, message: error.message });
+    renderDeviceInfo();
+    return [];
   }
 }
 
 async function discoverServices() {
   if (!state.server) return;
   state.discovered = [];
-  const services = await state.server.getPrimaryServices();
+  state.serviceAccessNote = "";
+  const services = await getAccessibleServices();
 
   for (const service of services) {
     const serviceInfo = {
@@ -224,6 +265,7 @@ function renderDeviceInfo() {
             gattConnected: Boolean(state.device.gatt?.connected)
           }
         : null,
+      serviceAccessNote: state.serviceAccessNote,
       notifications: state.notifications,
       services: state.discovered
     },

@@ -132,8 +132,8 @@
         <label for="namePrefix">设备名前缀过滤，可留空</label>
         <input id="namePrefix" placeholder="例如 BCI、Mind、EEG" />
 
-        <label for="optionalServices">可选服务 UUID，每行一个；未知协议可先留空</label>
-        <textarea id="optionalServices" placeholder="例如 0000180f-0000-1000-8000-00805f9b34fb"></textarea>
+        <label for="optionalServices">目标服务 UUID，每行一个；read/notify 必填</label>
+        <textarea id="optionalServices" placeholder="例如 0000180f-0000-1000-8000-00805f9b34fb。留空只能验证设备选择和 GATT 连接。"></textarea>
 
         <button id="connectButton">选择并连接 BCI</button>
         <button id="disconnectButton" class="secondary" disabled>断开连接</button>
