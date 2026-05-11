@@ -2,11 +2,11 @@
 
 ## 当前阻塞
 
-- app-pwa 当前 Robot mock 消费不足，Issue #8 判定 `BLOCK`。
-- 必须修正项见 `WAVE3_ROBOT_REVIEW.md`。
+- 缺少 TonyPi 实机访问方式，无法完成真实 AP/LAN、`scan_crystal`、`stop` 验证。
+- `scan_crystal.d6a` 是否已部署到 `/home/pi/TonyPi/ActionGroups` 未知。
+- `AGC.runActionGroup("scan_crystal")` 的阻塞、异常、耗时语义未知。
+- `stop` 是否能硬中断动作未知。
 
 ## 非本轮阻塞
 
-- 真实 TonyPi 上验证 `AGC.runActionGroup` 的阻塞、并发、停止行为。
-- 确认动作组文件复制到 `/home/pi/TonyPi/ActionGroups` 后名称完全匹配。
-- 确认 `rest` 是否适合作为异常后的默认恢复姿态。
+- 探针不是长期桥服务；实机验证通过后仍需产品化 HTTP/SSE 桥。
