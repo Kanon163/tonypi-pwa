@@ -34,3 +34,11 @@
 - `0015-wave3-robot-mock-review.md`：Robot mock 审查，给 `robot-bridge`。
 - `0016-wave3-bci-report-review.md`：BCI 与报告审查，给 `bci-cloud`。
 - `0017-wave3-integration-review.md`：Wave 3 集成审查，给 `integration-review`。
+
+## P4
+
+- `WAVE4_REQUESTS.md`：第四波真实硬件替换 request。
+- `0019-wave4-tonypi-bridge-probe.md`：TonyPi bridge 真实探针，给 `robot-bridge`。
+- `0020-wave4-bci-web-bluetooth-probe.md`：BCI Web Bluetooth 探针，给 `bci-cloud`。
+- `0021-wave4-pwa-live-adapter-seam.md`：PWA live adapter 接口替换，给 `app-pwa`。
+- `0022-wave4-integration-gate.md`：Wave 4 集成门禁，给 `integration-review`。
